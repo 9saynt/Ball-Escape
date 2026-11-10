@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
 <style>
-/* Layout: one-screen game. HUD bar / board stage / control bar, with full-screen overlays for menus. Lacquered night board, birch walls, steel ball. */
+/* Layout: one-screen game. HUD / hint band (tutorials) / board / control bar, full-screen overlays for menus. Lacquered night board, birch walls, steel ball. */
 :root{
   --lacquer:#121729;
   --board:#1d2440;
@@ -22,10 +22,11 @@
   --line:#2f3a62;
   --ink:#eef0f7;
   --muted:#98a1c0;
+  --dim:#3d4772;
   --brass:#e3b04b;
   --brass-ink:#2a1d05;
-  --birch:#d9c69c;
-  --danger:#e66a5c;
+  --red:#d9604f;
+  --blue:#5b8fe0;
   --display:"Dela Gothic One","Hiragino Sans","Noto Sans JP",sans-serif;
   --body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
   color-scheme:dark;
@@ -34,11 +35,10 @@ html{height:100%;box-sizing:border-box;background:var(--lacquer)}
 body{height:100%;background:var(--lacquer);color:var(--ink);font-family:var(--body);font-size:15px;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 *,*::before,*::after{box-sizing:border-box}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
-button:focus-visible,select:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 
 #app{height:100%;display:flex;flex-direction:column;gap:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px}
 
-/* HUD */
 .hud{display:flex;align-items:center;gap:10px}
 .hud .stage{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
 .hud .no{font-family:var(--display);font-size:12px;letter-spacing:.12em;color:var(--brass)}
@@ -46,46 +46,58 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--brass);outline
 .stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
 .stat b{font-family:var(--display);font-size:18px;font-weight:400;font-variant-numeric:tabular-nums}
 .stat span{font-size:10px;letter-spacing:.1em;color:var(--muted)}
-.iconbtn{height:36px;padding:0 12px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-size:13px;font-weight:700}
+.iconbtn{height:36px;padding:0 12px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-size:13px;font-weight:700;white-space:nowrap}
 
-/* stage */
+.hintbar{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.hintbar .tag{flex:none;font-family:var(--display);font-size:10px;letter-spacing:.14em;color:var(--brass-ink);background:var(--brass);border-radius:6px;padding:3px 6px;margin-top:2px}
+.hintbar p{margin:0;font-size:13px;line-height:1.6;min-width:0}
+
 .stage-wrap{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;touch-action:none}
 canvas#board{display:block;border-radius:10px;box-shadow:0 0 0 6px #0c1020,0 0 0 7px var(--line),0 18px 40px rgba(0,0,0,.5)}
 .stick{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(227,176,75,.45);pointer-events:none}
 .stick i{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:rgba(227,176,75,.5)}
 
-/* controls */
 .ctrl{display:flex;align-items:center;gap:10px;min-height:56px}
-.chip{font-size:12px;padding:6px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.inv{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:5px 9px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .chip.on{color:var(--brass);border-color:rgba(227,176,75,.5)}
-.ctrl .grow{flex:1}
-.jump{width:64px;height:56px;border-radius:16px;background:var(--brass);color:var(--brass-ink);font-family:var(--display);font-size:15px;box-shadow:0 4px 0 #9b7424}
+.chip.red{color:#f0a196;border-color:rgba(217,96,79,.6)}
+.chip.blue{color:#a9c6f4;border-color:rgba(91,143,224,.6)}
+.jump{flex:none;width:64px;height:56px;border-radius:16px;background:var(--brass);color:var(--brass-ink);font-family:var(--display);font-size:15px;box-shadow:0 4px 0 #9b7424}
 .jump:active{transform:translateY(3px);box-shadow:0 1px 0 #9b7424}
 
-/* overlays */
-.ov{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(10,13,26,.82);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:calc(env(safe-area-inset-top,0px) + 16px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(16px,env(safe-area-inset-left,0px))}
-.card{width:100%;max-width:420px;max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px 20px;display:flex;flex-direction:column;gap:14px}
-.card h1,.card h2{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;line-height:1.2}
+.ov{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(10,13,26,.84);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:calc(env(safe-area-inset-top,0px) + 16px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(16px,env(safe-area-inset-left,0px))}
+.card{width:100%;max-width:440px;max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 18px;display:flex;flex-direction:column;gap:14px}
+.card.wide{max-width:720px}
+.card h1,.card h2,.card h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;line-height:1.2}
 .card h1{font-size:42px;letter-spacing:.04em}
 .card h2{font-size:26px}
+.card h3{font-size:15px;letter-spacing:.06em;color:var(--brass);display:flex;align-items:baseline;gap:8px}
+.card h3 small{font-family:var(--body);font-size:12px;color:var(--muted);letter-spacing:0}
 .eyebrow{font-family:var(--display);font-size:11px;letter-spacing:.2em;color:var(--brass)}
-.card p{margin:0;line-height:1.7;color:var(--ink)}
-.card .note{font-size:12.5px;color:var(--muted);line-height:1.6}
-.btn{height:50px;border-radius:12px;background:var(--brass);color:var(--brass-ink);font-weight:700;font-size:16px;box-shadow:0 4px 0 #9b7424}
+.card p{margin:0;line-height:1.7}
+.note{font-size:12.5px;color:var(--muted);line-height:1.6}
+.ver{font-size:11px;color:var(--muted);letter-spacing:.08em;font-variant-numeric:tabular-nums}
+.btn{height:50px;border-radius:12px;background:var(--brass);color:var(--brass-ink);font-weight:700;font-size:16px;box-shadow:0 4px 0 #9b7424;padding:0 12px}
 .btn:active{transform:translateY(3px);box-shadow:0 1px 0 #9b7424}
-.btn.sub{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.btn.sub{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none;font-size:14px}
 .row{display:flex;gap:10px}
-.row>*{flex:1}
+.row>*{flex:1;min-width:0}
 
-.levels{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
-.lv{position:relative;text-align:left;padding:12px;border-radius:12px;background:var(--board);border:1px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0}
-.lv .n{font-family:var(--display);font-size:22px;color:var(--brass);font-variant-numeric:tabular-nums}
-.lv .t{font-size:12.5px;font-weight:700;line-height:1.35}
-.lv .s{font-size:13px;letter-spacing:.1em;color:var(--brass)}
-.lv .s .off{color:#3d4772}
-.lv .b{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chapter{display:flex;flex-direction:column;gap:8px}
+.levels{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.lv{position:relative;text-align:left;padding:10px 11px;border-radius:12px;background:var(--board);border:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:2px 6px;min-width:0}
+.lv .n{font-family:var(--display);font-size:18px;color:var(--brass);font-variant-numeric:tabular-nums;line-height:1.1}
+.lv .t{grid-column:1/-1;font-size:13px;font-weight:700;line-height:1.35;min-width:0}
+.lv .m{grid-column:1/-1;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.5}
+.lv .tg{grid-column:1/-1;font-size:10.5px;color:var(--muted);opacity:.85}
 .lv[disabled]{opacity:.38;cursor:not-allowed}
-.lv .tag{font-size:10px;color:var(--muted)}
+.rk{font-family:var(--display);font-size:18px;line-height:1.1;text-align:right;color:var(--dim)}
+.rk.r6{color:var(--brass);text-shadow:0 0 10px rgba(227,176,75,.55)}
+.rk.r5{color:var(--brass)}
+.rk.r4{color:var(--ink)}
+.rk.r3{color:#c4cae0}
+.rk.r2,.rk.r1,.rk.r0{color:var(--muted)}
 
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{flex:1;height:36px;font-size:13px;color:var(--muted)}
@@ -93,49 +105,52 @@ canvas#board{display:block;border-radius:10px;box-shadow:0 0 0 6px #0c1020,0 0 0
 .setline{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
 .setline .seg{flex:1}
 
-.result{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.result div{background:var(--board);border-radius:12px;padding:10px 12px}
-.result b{display:block;font-family:var(--display);font-weight:400;font-size:22px;font-variant-numeric:tabular-nums}
-.result span{font-size:11px;color:var(--muted);letter-spacing:.08em}
-.bigstars{font-size:34px;letter-spacing:.15em;color:var(--brass);text-align:center}
-.bigstars .off{color:#3d4772}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.targets{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;background:var(--board);border-radius:12px;padding:10px 12px;font-variant-numeric:tabular-nums}
+.targets b{font-family:var(--display);font-weight:400;color:var(--brass)}
+.result{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.result div{background:var(--board);border-radius:12px;padding:9px 10px;min-width:0}
+.result b{display:block;font-family:var(--display);font-weight:400;font-size:19px;font-variant-numeric:tabular-nums}
+.result span{font-size:11px;color:var(--muted)}
+.result em{display:block;font-style:normal;font-size:10.5px;color:var(--brass);margin-top:2px}
+.bigrank{font-family:var(--display);font-size:72px;line-height:1;text-align:center;color:var(--brass)}
+.bigrank.low{color:var(--ink)}
 
 @media (prefers-reduced-motion:reduce){.btn:active,.jump:active{transform:none}}
 </style>
 
 <div id="app">
   <div class="hud">
-    <button class="iconbtn" id="menuBtn" aria-label="メニュー">メニュー</button>
+    <button class="iconbtn" id="menuBtn">メニュー</button>
     <div class="stage"><span class="no" id="hudNo">STAGE 01</span><span class="nm" id="hudName">—</span></div>
     <div class="stat"><b id="hudTime">0:00.0</b><span>TIME</span></div>
     <div class="stat"><b id="hudFalls">0</b><span>落下</span></div>
   </div>
+  <div class="hintbar" id="hintBar" hidden><span class="tag">ヒント</span><p id="hintText"></p></div>
   <div class="stage-wrap" id="stageWrap">
     <canvas id="board" aria-label="迷路の盤面"></canvas>
     <div class="stick" id="stick" hidden><i id="knob"></i></div>
   </div>
   <div class="ctrl">
-    <span class="chip" id="modeChip">操作：準備中</span>
-    <button class="iconbtn" id="calibBtn">水平合わせ</button>
-    <span class="grow"></span>
+    <div class="inv" id="inv"></div>
+    <button class="iconbtn" id="calibBtn" hidden>水平合わせ</button>
     <button class="jump" id="jumpBtn" hidden>JUMP</button>
   </div>
 </div>
 
-<!-- title -->
 <div class="ov" id="ovTitle">
   <div class="card">
     <span class="eyebrow">KATAMUKI LABYRINTH</span>
     <h1>傾き迷路</h1>
-    <p>スマホを傾けて鋼の玉を転がし、ゴールの金の輪まで運ぶゲームです。ステージが進むと、氷・泥・落とし穴・ジャンプ・暗闇などのしかけが増えていきます。</p>
+    <p>スマホを傾けて鋼の玉を転がし、金色の輪まで運ぶゲームです。ステージが進むと、氷・ジャンプ・鍵・ワープ・崩れる床・暗闇などのしかけが増えていきます。</p>
     <button class="btn" id="startBtn">はじめる</button>
-    <p class="note">傾きセンサーが使えない環境では、画面をドラッグした方向に転がります（パソコンは矢印キー＋スペースでジャンプ）。iPhoneでは「はじめる」の後に出る許可ダイアログで「許可」を選んでください。</p>
+    <p class="note">傾きセンサーが使えない環境では、画面をドラッグした方向に転がります（パソコンは矢印キー、スペースでジャンプ）。iPhoneでは「はじめる」の後に出る許可で「許可」を選んでください。</p>
+    <span class="ver" id="verTitle"></span>
   </div>
 </div>
 
-<!-- level select -->
 <div class="ov" id="ovSelect" hidden>
-  <div class="card">
+  <div class="card wide">
     <span class="eyebrow">STAGE SELECT</span>
     <h2>ステージを選ぶ</h2>
     <div class="setline">感度<div class="seg" id="sensSeg">
@@ -143,44 +158,47 @@ canvas#board{display:block;border-radius:10px;box-shadow:0 0 0 6px #0c1020,0 0 0
       <button data-v="1" aria-pressed="true">ふつう</button>
       <button data-v="2" aria-pressed="false">敏感</button>
     </div></div>
-    <div class="levels" id="levelGrid"></div>
     <p class="note" id="modeNote"></p>
+    <div id="chapters" style="display:flex;flex-direction:column;gap:18px"></div>
+    <p class="note">評価：S+（Sの条件で中間を取らない）・S・A・B・C・D・E。時間と落下回数をそれぞれ判定し、低いほうになります。</p>
+    <span class="ver" id="verSelect"></span>
   </div>
 </div>
 
-<!-- intro -->
 <div class="ov" id="ovIntro" hidden>
   <div class="card">
     <span class="eyebrow" id="inNo">STAGE 01</span>
     <h2 id="inName">—</h2>
+    <div class="tags" id="inTags"></div>
     <p id="inHint">—</p>
-    <p class="note" id="inTip">スマホを遊びやすい角度で持ってからスタートを押してください。その角度が「水平」になります。</p>
+    <div class="targets" id="inTargets"></div>
+    <p class="note" id="inTip"></p>
     <button class="btn" id="goBtn">スタート</button>
     <button class="btn sub" id="inBack">ステージ選択へ</button>
   </div>
 </div>
 
-<!-- pause -->
 <div class="ov" id="ovPause" hidden>
   <div class="card">
     <span class="eyebrow">PAUSE</span>
     <h2>一時停止中</h2>
     <button class="btn" id="resumeBtn">続ける</button>
-    <div class="row"><button class="btn sub" id="retryBtn">やり直す</button><button class="btn sub" id="toSelectBtn">ステージ選択</button></div>
+    <button class="btn sub" id="backPointBtn">最後の地点に戻る（落下+1）</button>
+    <div class="row"><button class="btn sub" id="retryBtn">最初から</button><button class="btn sub" id="toSelectBtn">ステージ選択</button></div>
   </div>
 </div>
 
-<!-- clear -->
 <div class="ov" id="ovClear" hidden>
   <div class="card">
     <span class="eyebrow" id="clNo">STAGE 01 CLEAR</span>
     <h2 id="clName">クリア</h2>
-    <div class="bigstars" id="clStars">★★★</div>
+    <div class="bigrank" id="clRank">S</div>
     <div class="result">
-      <div><span>タイム</span><b id="clTime">0:00.0</b></div>
-      <div><span>落下回数</span><b id="clFalls">0</b></div>
+      <div><span>タイム</span><b id="clTime">0:00.0</b><em id="clTimeNew"></em></div>
+      <div><span>落下</span><b id="clFalls">0</b><em id="clFallsNew"></em></div>
+      <div><span>中間</span><b id="clCp">—</b></div>
     </div>
-    <p class="note" id="clRule">★3：目標タイム以内かつ落下0回</p>
+    <p class="note" id="clRule"></p>
     <button class="btn" id="nextBtn">次のステージへ</button>
     <div class="row"><button class="btn sub" id="clRetry">もう一度</button><button class="btn sub" id="clSelect">ステージ選択</button></div>
   </div>
@@ -189,172 +207,79 @@ canvas#board{display:block;border-radius:10px;box-shadow:0 0 0 6px #0c1020,0 0 0
 <script>
 (function(){
 "use strict";
-
-/* ===== ステージ定義 =====
- # 壁  . 床  O 穴  S 開始  G ゴール  C チェックポイント
- I 氷（滑る）  M 泥（重い）  > < ^ v ベルトコンベア */
+const VERSION="1.1.0";
 const LEVELS=[
- {name:"はじめの一歩",par:16,hint:"スマホを傾けると玉が転がります。金色の輪（ゴール）まで運びましょう。",map:[
- "#########",
- "#S......#",
- "#######.#",
- "#.......#",
- "#.#######",
- "#.......#",
- "#######.#",
- "#.......#",
- "#.#######",
- "#.......#",
- "#######.#",
- "#G......#",
- "#########"]},
- {name:"落とし穴",par:22,hint:"黒い穴に落ちると、最後に触れた旗（チェックポイント）か開始地点に戻ります。",map:[
- "#########",
- "#S..O...#",
- "#.#.#.#.#",
- "#.......#",
- "#O#.#O#.#",
- "#...O...#",
- "#.#.#.#.#",
- "#.O...O.#",
- "#.#.#.#.#",
- "#...O...#",
- "#.#C#.#O#",
- "#O.....G#",
- "#########"]},
- {name:"氷の回廊",par:24,hint:"水色の床は氷。ほとんど止まりません。曲がり角の手前で反対へ傾けてブレーキを。",map:[
- "#########",
- "#S.IIIII#",
- "###IIIII#",
- "#IIIIIII#",
- "#I#####I#",
- "#IIIIOII#",
- "#OIIIIII#",
- "#IIIII###",
- "#I#######",
- "#IICIIII#",
- "#OOOOOII#",
- "#G.IIIII#",
- "#########"]},
- {name:"泥と氷",par:30,hint:"茶色の床は泥。重く、ゆっくりしか進めません。氷との差に注意。",map:[
- "#########",
- "#S..MMMM#",
- "#.#####M#",
- "#.#IIIIM#",
- "#.#I###.#",
- "#.#IIIO.#",
- "#.###I#.#",
- "#MMM.I#.#",
- "#M#OOI..#",
- "#M#IIIII#",
- "#M####.O#",
- "#MMMMC.G#",
- "#########"]},
- {name:"ジャンプ入門",par:22,jump:true,hint:"画面タップ（またはJUMPボタン）でジャンプ。1マスの穴は、勢いをつけて飛び越えられます。",map:[
- "#########",
- "#S......#",
- "#.......#",
- "#OOOOOOO#",
- "#.......#",
- "#...C...#",
- "#OOOOOOO#",
- "#.......#",
- "#.......#",
- "#OOOOOOO#",
- "#.......#",
- "#.....G.#",
- "#########"]},
- {name:"飛び石",par:28,jump:true,hint:"小さな島から島へ。ジャンプしないと先へ進めません。着地後はすぐブレーキ。",map:[
- "#########",
- "#S.O..O.#",
- "#..O..O.#",
- "#OOOOOOO#",
- "#..O..O.#",
- "#..O.CO.#",
- "#OOOOOOO#",
- "#..O..O.#",
- "#..O..O.#",
- "#OOOOOOO#",
- "#..O..O.#",
- "#..O..OG#",
- "#########"]},
- {name:"慣性の盤",par:32,friction:0.28,accel:8,hint:"この盤は摩擦がほとんどありません。一度転がり出すとなかなか止まらないので、早めに傾きを戻して。",map:[
- "#########",
- "#S......#",
- "#.OOOOO.#",
- "#.......#",
- "######..#",
- "#.......#",
- "#..OOOOO#",
- "#.......#",
- "#OOOOO..#",
- "#....C..#",
- "#..######",
- "#......G#",
- "#########"]},
- {name:"ベルトコンベア",par:28,hint:"矢印の床は流れています。流れに逆らって進むか、うまく利用しましょう。",map:[
- "#########",
- "#S......#",
- "#>>>>>>.#",
- "#.......#",
- "#.<<<<<<#",
- "#OOOOOO.#",
- "#.......#",
- "#C>>>>>>#",
- "#.......#",
- "#.<<<<<<#",
- "#.OOOOOO#",
- "#.....G.#",
- "#########"]},
- {name:"暗闇",par:40,dark:true,hint:"玉の周りしか見えません。ゴールの光をたよりに、壁伝いに慎重に。",map:[
- "#########",
- "#S#.....#",
- "#.#.###.#",
- "#.#.#O..#",
- "#...#.###",
- "###.#...#",
- "#...###.#",
- "#.#O....#",
- "#.#####.#",
- "#...C.#.#",
- "###.#.#.#",
- "#G..#...#",
- "#########"]},
- {name:"さかさ盤",par:34,invert:true,jump:true,hint:"傾けた方向と逆に転がります。氷・泥・コンベアも混在する総仕上げ。",map:[
- "#########",
- "#G..O..S#",
- "#.#####.#",
- "#.IIIII.#",
- "#O#####.#",
- "#...C...#",
- "#.#####O#",
- "#.MMMMM.#",
- "#.#####.#",
- "#.>>>>>.#",
- "#.......#",
- "#OOOOOOO#",
- "#########"]}
+{"id":"s01","ch":1,"tut":true,"name":"はじめの一歩","hint":"スマホを傾けると玉が転がります。金色の輪（ゴール）まで運びましょう。旗は「中間」で、取ると落ちたときにそこから再開できます。","map":["#########","#S......#","#######.#","#.......#","#.#######","#.......#","####C##.#","#######.#","#.......#","#.#######","#.......#","#######G#","#########"],"par":24.5},
+{"id":"s02","ch":1,"tut":true,"name":"落とし穴","hint":"黒い穴に落ちると、最後に取った中間かスタートに戻ります。落下回数は評価に影響します。","map":["#########","#S..O...#","#.O...O.#","#...O...#","#O.O..O.#","#...O...#","###.###C#","#...O...#","#.O...O.#","#...O..O#","#O.O...O#","#....O.G#","#########"],"par":13},
+{"id":"s03","ch":1,"tut":true,"name":"攻めか守りか","hint":"中間を一度も取らずに、Sの条件でクリアすると最高評価「S+」。安全を取るか、攻めるか選びましょう。","map":["#########","#S.....O#","#OOOOO.O#","#O.....O#","#O.OOOOO#","#O.....C#","#OOOOO.O#","#O.....O#","#O.OOOOO#","#O.....O#","#OOOOO.O#","#G.....O#","#########"],"par":23},
+{"id":"s04","ch":1,"tut":true,"name":"コイン集め","hint":"コインを全部集めるまで、ゴールは閉じています。残りの枚数は画面の下に出ます。","map":["#########","#S.....$#","#.#.#.#.#","#.......#","#$#.#.#.#","#.......#","#.#C#.#$#","#.......#","#.#.#.#.#","#$......#","#.#.#.#.#","#....$.G#","#########"],"par":19.5},
+{"id":"s05","ch":1,"name":"基本のおさらい","hint":"穴をよけながらコインを集めてゴールへ。","map":["#########","#S.O.$..#","#.OO.OO.#","#.....O.#","#O.OO.O$#","#..$O...#","#.O.O.OO#","#.O...C.#","#..OOO.O#","#O.$.O..#","#.OO...O#","#.$..O.G#","#########"],"par":29.5},
+{"id":"s06","ch":2,"tut":true,"name":"氷の回廊","hint":"水色の床は氷。ほとんど止まりません。曲がる手前で反対へ傾けてブレーキを。","map":["#########","#S.IIIII#","###IIIII#","#IIIIIII#","#I#####I#","#IIIIOII#","#OIIIIII#","#IIIII###","#I#######","#IIIIIII#","#OOOOOCI#","#G.IIIII#","#########"],"par":20},
+{"id":"s07","ch":2,"tut":true,"name":"ぬかるみ","hint":"茶色の床は泥。重くてなかなか進みません。しっかり傾けて押し進みましょう。","map":["#########","#S....#C#","#MMMMMMM#","#M#####M#","#M#...#M#","#MMM#MMM#","###M#M###","#..M.M..#","#.##M##.#","#..MMM..#","####M####","#...G...#","#########"],"par":20.5},
+{"id":"s08","ch":2,"tut":true,"name":"ベルトコンベア","hint":"矢印の床は流れています。流れに乗ると速く、逆らうと遅くなります。穴へ流されないように。","map":["#########","#S......#","#>>>>>>>#","#.......#","#<<<<<<<#","#.......#","##.#C#.##","#vvvvvvv#","#vOvOvOv#","#.......#","#^^^^^^^#","#......G#","#########"],"par":11.5},
+{"id":"s09","ch":2,"name":"氷と泥","hint":"滑る氷と重い泥。感覚の切り替えが勝負です。","map":["#########","#SIIIII$#","#IIOIIII#","#IIIIOII#","######M##","#MMMMMMM#","#M$MMC.M#","#MMMMMMM#","##M######","#IIIOII$#","#IOIIIOI#","#$IIIIIG#","#########"],"par":28},
+{"id":"s10","ch":2,"name":"流れる氷","hint":"コンベアで勢いがついたまま氷へ。穴の手前で止まれるか。","map":["#########","#S..C...#","#>>>>>>>#","#IIIIIII#","#IOIOIOI#","#IIIIIII#","#<<<<<<<#","#.......#","#OOO.OOO#","#IIIIIII#","#II$I$II#","#OOOGOOO#","#########"],"par":13.5},
+{"id":"s11","ch":3,"tut":true,"name":"ジャンプ","jump":true,"hint":"画面をタップ（またはJUMP）でジャンプ。勢いをつけると穴1マスを飛び越えられます。2マスは届きません。","map":["###########","#S........#","#.........#","#OOOOOOOOO#","#.........#","#....C....#","#OOOOOOOOO#","#.........#","#.........#","#OOOOOOOOO#","#.........#","#OO.....OO#","#OOOOOOOOO#","#........G#","###########"],"par":11},
+{"id":"s12","ch":3,"tut":true,"name":"羽を拾え","hint":"羽のアイテムを拾うと、このコースの間だけジャンプできるようになります。","map":["###########","#S.......J#","#.#########","#.........#","#.........#","#OOOOOOOOO#","#.........#","#...C.....#","#.........#","#OOOOOOOOO#","#.........#","#.........#","#OOOOOOOOO#","#....G....#","###########"],"par":18},
+{"id":"s13","ch":3,"tut":true,"name":"大ジャンプ","jump":true,"hint":"翼のアイテムを拾うと、このコースの間はジャンプが大ジャンプになり、穴2マスを越えられます。","map":["###########","#S........#","#.........#","#OOOOOOOOO#","#.........#","#L........#","#.........#","#OOOOOOOOO#","#OOOOOOOOO#","#.........#","#....C....#","#OOOOOOOOO#","#OOOOOOOOO#","#........G#","###########"],"par":11.5},
+{"id":"s14","ch":3,"tut":true,"name":"バネ床","hint":"バネ床に乗ると、進んできた方向へ3マス先まで跳ね飛びます。着地点をよく見て。","map":["###########","#S........#","#....P....#","#OOOOOOOOO#","#OOOOOOOOO#","#.........#","#C........#","#........P#","#OOOOOOOOO#","#OOOOOOOOO#","#........P#","#OOOOOOOOO#","#OOOOOOOOO#","#G........#","###########"],"par":16.5},
+{"id":"s15","ch":3,"name":"跳躍のおさらい","hint":"氷で勢いをつけてバネへ。羽を拾ったら、氷の着地に注意。","map":["###########","#S..IIIIII#","#OOOOOOOOP#","#OOOOOOOOO#","#OOOOOOOOO#","#J.......I#","#..C......#","#OOOOOOOOO#","#IIIIIIIII#","#IIIIIIIII#","#OOOOOOOOO#","#.........#","#OOOOOOOO.#","#G........#","###########"],"par":18.5},
+{"id":"s16","ch":4,"tut":true,"name":"鍵と扉","hint":"鍵を拾うと、同じ色の扉が開きます。","map":["###########","#S.......r#","#.#########","#.........#","#########.#","#.........#","#.#########","#.........#","#########R#","#C........#","#########.#","#.........#","#.#########","#........G#","###########"],"par":38.5},
+{"id":"s17","ch":4,"tut":true,"name":"スイッチ壁","hint":"スイッチを踏むたびに、赤い壁と青い壁の開け閉めが入れ替わります。","map":["###########","#S.......x#","#X#########","#.......x.#","#########Y#","#.........#","#.###C#####","#..x......#","#########X#","#.........#","#.#########","#.........#","#########.#","#G........#","###########"],"par":41.5},
+{"id":"s18","ch":4,"name":"鍵とスイッチ","hint":"鍵の部屋は赤い壁の向こう。出口の青い壁との兼ね合いを考えて。","map":["###########","#S...#..$b#","#....X....#","#.x..#.$..#","#Y#########","#...$.....#","#.#######.#","#.#######.#","#.#######C#","#.........#","#####B#####","#$........#","#.#######.#","#...$...G.#","###########"],"par":35.5},
+{"id":"s19","ch":4,"tut":true,"name":"ワープ","hint":"渦に入ると、同じ色のもう一つの渦へ移動します。","map":["###########","#S...#....#","#....#..T.#","#..T.#....#","######....#","######..U.#","######....#","###########","#.U.......#","#.........#","#OOOO.OOOO#","#.........#","#...C.....#","#........G#","###########"],"par":13},
+{"id":"s20","ch":4,"name":"ワープ迷宮","hint":"流れに逆らって渦へ。鍵を取ってから戻る道を探そう。","map":["###########","#S...#..r.#","#>>>v#.##.#","#...v#.$#.#","#.$.v#.##.#","#..T<#U..T#","###########","#U........#","#<<<<<<<<.#","#.........#","####R######","#..$..>>>.#","#.C#####..#","#......$G.#","###########"],"par":25},
+{"id":"s21","ch":5,"tut":true,"name":"崩れる床","hint":"ひび割れた床は、一度通ると崩れて穴になります。動けなくなったらメニューの「最後の地点に戻る」へ。","map":["###########","#S...$....#","#%OOOOOOO%#","#%OOOOOOO%#","#.C.......#","#OOOO%OOOO#","#OOOO%OOOO#","#.........#","#.OOOOOOO.#","#.%%%%%%%.#","#.OOOOOOO.#","#.........#","#%OOOOOOO%#","#$...$...G#","###########"],"par":21.5},
+{"id":"s22","ch":5,"name":"崩落の輪","hint":"輪の上のコインを全部取ってから出口へ。回る向きを間違えると戻れません。","map":["###########","#S...#....#","#OO%OO%O#.#","#O%%%%%%#.#","#O%OOOO%#.#","#O$OOOO$#.#","#O%OOOO%#.#","#O%%$%%%#.#","#OOOOOOO#.#","#.........#","#.........#","#.OOO.OOO.#","#C...$....#","#OOOO.OOOG#","###########"],"par":27.5},
+{"id":"s23","ch":5,"tut":true,"name":"風の通り道","hint":"風の床では矢印の方向へ押し流されます。ジャンプ中も流されます。","map":["###########","#S........#","#222222222#","#.........#","#.O.O.O.O.#","#666666666#","#OOOOOOOO.#","#.........#","#444444444#","#.OOOOOOOO#","#.........#","#...C.....#","#888888888#","#........G#","###########"],"par":21.5},
+{"id":"s24","ch":5,"name":"風上へ跳べ","jump":true,"hint":"踏み切りの床に風。流されながら穴を飛び越えよう。","map":["###########","#S........#","#666666666#","#OOOOOOOOO#","#...C.....#","#444444444#","#OOOOOOOOO#","#.........#","#.O.O.O.O.#","#666666666#","#OOOOOOOOO#","#.........#","#OO.OOO.OO#","#....G....#","###########"],"par":10.5},
+{"id":"s25","ch":5,"name":"崩れる氷原","hint":"風に逆らってコインを取り、崩れる出口へ。氷の上では止まれません。","map":["###########","#S.IIIIIII#","#OOOOOO%OO#","#$6666666.#","#OOOOOOO%O#","#....C....#","#IIIIIIIII#","#%OOOOOOO%#","#444444444#","#OOOO%OOOO#","#.........#","#.II$I$II.#","#OOOOOOOO%#","#G.......$#","###########"],"par":34.5},
+{"id":"s26","ch":6,"tut":true,"name":"慣性の盤","friction":0.28,"accel":8,"hint":"この盤は摩擦がほとんどありません。動き出すと止まりにくいので、早めに傾きを戻して。","map":["###########","#S........#","#.OOOOOOO.#","#.........#","#######...#","#.........#","#...OOOOOO#","#.........#","#OOOOOO...#","#.........#","#C..#######","#.........#","#.OOOOOOOO#","#........G#","###########"],"par":35.5},
+{"id":"s27","ch":6,"tut":true,"name":"暗闇","dark":true,"hint":"玉の周りしか見えません。ゴールの光をたよりに進みましょう。","map":["###########","#S..#.....#","###.#.###.#","#...#...#.#","#.#####.#.#","#.....#.#.#","#####.#...#","#...#.#####","#.#.#.....#","#.#.#####.#","#.#...C...#","#.#######.#","#...O.....#","#.#####..G#","###########"],"par":21},
+{"id":"s28","ch":6,"tut":true,"name":"ランタン","dark":true,"optional":["lantern"],"hint":"ランタンを拾うと、見える範囲が広がります。","map":["###########","#S....#*..#","#.###.#.#.#","#.#...#.#.#","#.#.###.#.#","#...#...#.#","###.#.###.#","#...#...#.#","#.#####.#.#","#.....#...#","#####.#####","#.C.O.....#","#.#######.#","#.......#G#","###########"],"par":21.5},
+{"id":"s29","ch":6,"tut":true,"name":"さかさ盤","invert":true,"hint":"この盤では、傾けた方向と逆に転がります。","map":["###########","#S........#","#.OOO.OOO.#","#.........#","#OOO.O.OOO#","#.........#","#.O.OCO.O.#","#.........#","#OOOO.OOOO#","#.........#","#.OO.O.OO.#","#.........#","#OOO.O.OOO#","#....G....#","###########"],"par":17},
+{"id":"s30","ch":6,"name":"闇の鍵","dark":true,"optional":["lantern"],"hint":"暗闇の中で鍵とコインを探す。ランタンを先に取るかどうかはお好みで。","map":["###########","#S..#...$.#","#.#.#.###.#","#.#...#r..#","#.#####.###","#...$.#...#","###.#.###.#","#*..#...#.#","#.#####.#.#","#...C...#.#","#.#######.#","#.....$...#","#####R#####","#$.......G#","###########"],"par":48},
+{"id":"s31","ch":7,"name":"氷のスイッチ","hint":"氷の上のスイッチは、滑って通過しただけでも切り替わります。","map":["#############","#S..x#IIIIII#","#....XIIOIII#","#....#IIIIxI#","#C...#IIOIII#","#....#IIIIII#","#....#IIIIII#","#########Y###","#IIIIIIIIIII#","#IIOIIIIOIII#","#IIIIIxIIIII#","#XXXXXXXXXXX#","#...........#","#OOOOO.OOOOO#","#...........#","#..........G#","#############"],"par":22},
+{"id":"s32","ch":7,"name":"風とバネ","hint":"風に押されながらバネに乗る。着地点がずれないように。","map":["#############","#S....$....$#","#66666P66666#","#OOOOOOOOOOO#","#OOOOOOOOOOO#","#C..........#","#44444444444#","#P..........#","#OOOOOOOOOOO#","#OOOOOOOOOOO#","#.....$.....#","#8888888888P#","#OOOOOOOOOOO#","#OOOOOOOOOOO#","#$.........$#","#.....G.....#","#############"],"par":33},
+{"id":"s33","ch":7,"name":"ワープと崩落","hint":"鍵は崩れる橋の先。どちらの橋で行き、どちらで戻るか。","map":["#############","#S....#.%%%r#","#....T#.OOO.#","#.....#T%%%.#","#.....#.OOOO#","#.....#U#####","#############","#U....$....$#","#OOOOO%OOOOO#","#$.........C#","#OOOOO%OOOOO#","#...........#","#####R#######","#...........#","#.OOOOOOOOO.#","#$.........G#","#############"],"par":42},
+{"id":"s34","ch":7,"name":"さかさの風","invert":true,"jump":true,"hint":"操作は逆、風は容赦なし。跳ぶ前に一呼吸。","map":["#############","#S..........#","#66666666666#","#OOOOOOOOOOO#","#...........#","#..O..C..O..#","#44444444444#","#OOOOOOOOOOO#","#...........#","#.O.O.O.O.O.#","#22222222222#","#OOOOO.OOOOO#","#...........#","#88888888888#","#OOOOOOOOOOO#","#..........G#","#############"],"par":16.5},
+{"id":"s35","ch":7,"name":"慣性の鍵","friction":0.28,"accel":8,"hint":"止まらない盤の上でスイッチと鍵。通り過ぎるとスイッチが戻ります。","map":["#############","#S.........$#","#.OOO.O.OOO.#","#.....x.....#","#OOXOOOOOXOO#","#$....r....$#","#.OOOOOOOOO.#","#...........#","######R######","#...........#","#.O.O.C.O.O.#","#...........#","#OOOOO.OOOOO#","#$.........$#","#.OOOOOOOOO.#","#.....G.....#","#############"],"par":57.5},
+{"id":"s36","ch":8,"name":"氷上の跳躍","hint":"羽で跳び、翼で越える。着地はすべて氷の上。","map":["#############","#S.IIIIIIIIJ#","#OOOOOOOOOO%#","#IIIIIIIIIII#","#OOOOOOOOOOO#","#.....C.....#","#L.........$#","#OOOOOOOOOOO#","#OOOOOOOOOOO#","#IIIIIIIIIII#","#I%I%I%I%I%I#","#OOOOOOOOOOO#","#OOOOOOOOOOO#","#$IIIIIIIII.#","#IOOOOOOOOOI#","#..........G#","#############"],"par":25},
+{"id":"s37","ch":8,"name":"闇のワープ","dark":true,"optional":["lantern"],"hint":"暗闇でコンベアに流されながら、渦をたどる。","map":["#############","#S..*.#....U#","#>>>>v#.###.#","#....v#.#$#.#","#.$..v#.#.#.#","#....v#...#.#","#T<<<<#^^^^^#","#######T....#","#############","#U.........C#","#OOOOOOOOOvO#","#$.<<<<<<<<.#","#.OOOOOOOOO.#","#..........$#","#OOOOO.OOOOO#","#.....G.....#","#############"],"par":49.5},
+{"id":"s38","ch":8,"name":"嵐の迷路","hint":"風とコンベアにもまれながら、スイッチ・鍵・スイッチの順に。","map":["#############","#S.666666666#","#OOOOOOOOOx.#","#OOOOOOOOOOX#","#...........#","#<<<<<<<<<<<#","#.....C.....#","#>>>>>>>>>>>#","#b..........#","#OOOOOOOOOOB#","#...........#","#88888888888#","#.OOOOOOOOO.#","#$....x....$#","#YYYYYYYYYYY#","#.....G.....#","#############"],"par":35},
+{"id":"s39","ch":8,"name":"崩落するさかさ盤","invert":true,"hint":"逆さ操作でバネに乗り、崩れる床を一筆書き。","map":["#############","#S..........#","#%%%%%P%%%%%#","#OOOOOOOOOOO#","#OOOOOOOOOOO#","#$.........$#","#%OOOOOOOOO%#","#%OOOOOOOOO%#","#.C.........#","#.OOOOPOOOO.#","#.OOOOOOOOO.#","#.OOOOOOOOO.#","#....$.$....#","#OOOOO%OOOOO#","#OOOOO%OOOOO#","#.....G.....#","#############"],"par":30.5},
+{"id":"s40","ch":8,"name":"傾き迷路・終","hint":"これまでの全てのしかけ。泥、羽、氷、スイッチ、風、渦、バネ、翼、流れ、崩落、そして扉。中間は跳び越えられます。","map":["#############","#SMMMMMMMMJ.#","#OOOOOOOOOOv#","#IIIIIIIIIII#","#OOOOOOOOOOO#","#r....C....x#","#X###########","#6666666666T#","#############","#T..POO.L..v#","###########v#","#$<<<<<<<<<<#","#.###########","#.%%%%OO.R..#","###########$#","###########G#","#############"],"par":49.5}
 ];
+const CHAPTERS=[{"n":1,"name":"基本"},{"n":2,"name":"床"},{"n":3,"name":"跳ぶ"},{"n":4,"name":"しかけ"},{"n":5,"name":"崩落と風"},{"n":6,"name":"環境"},{"n":7,"name":"複合"},{"n":8,"name":"難関"}];
 
-/* ===== 物理定数 ===== */
-const R=0.3, BOUNCE=0.35, JUMP_DUR=0.55, MAX_SPEED=6.5;
-const FRICTION={".":2.2,S:2.2,C:2.2,G:2.2,I:0.18,M:7.5,">":2.2,"<":2.2,"^":2.2,"v":2.2};
-const CONVEYOR={">":[1,0],"<":[-1,0],"^":[0,-1],"v":[0,1]};
-const CONVEYOR_ACC=9;
+/* ===== 定数 ===== */
+const R=0.3,BOUNCE=0.35,MAX_SPEED=6.5;
+const JUMPS={n:{dur:0.55,cap:3.2},l:{dur:0.7,cap:3.9}};
+const PAD_DUR=0.6,PAD_DIST=3;
+const FRICTION={I:0.18,M:7.5};
+const CONVEYOR={">":[1,0],"<":[-1,0],"^":[0,-1],"v":[0,1]},CONVEYOR_ACC=9;
+const WIND={"6":[1,0],"4":[-1,0],"2":[0,1],"8":[0,-1]},WIND_ACC=10;
 const SENS_DEG=[30,22,15];
+const RANKS=["E","D","C","B","A","S","S+"];
+const COL={bg:"#1d2440",f1:"#28304f",f2:"#262e4c",wall:"#d9c69c",wallLo:"#a28a5f",wallHi:"#f1e2bf",
+  ice:"#3f7f98",mud:"#5b4230",crumb:"#3b3247",red:"#d9604f",redLo:"#9c3f33",blue:"#5b8fe0",blueLo:"#3a62a8",
+  brass:"#e3b04b",muted:"#98a1c0",warpT:"#b48be6",warpU:"#4fc7b4"};
 
 /* ===== 保存 ===== */
-const SAVE_KEY="katamuki-maze-v1";
-let save={best:{},unlocked:1,sens:1};
-try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");if(s&&typeof s==="object")save=Object.assign(save,s);}catch(e){}
+const SAVE_KEY="katamuki-maze-v2";
+let save={v:2,stages:{},sens:1};
+try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");if(s&&typeof s==="object"&&s.stages&&typeof s.stages==="object")save=Object.assign(save,s);}catch(e){}
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save));}catch(e){}}
+function rec(id){if(!save.stages[id])save.stages[id]={rank:-1,time:null,minFalls:null,totalFalls:0,clears:0};return save.stages[id];}
+function cleared(i){const r=save.stages[LEVELS[i].id];return !!(r&&r.clears>0);}
+function unlocked(i){return i===0||cleared(i-1);}
 
 /* ===== DOM ===== */
 const $=id=>document.getElementById(id);
-const canvas=$("board"),ctx=canvas.getContext("2d");
-const wrap=$("stageWrap");
+const canvas=$("board"),ctx=canvas.getContext("2d"),wrap=$("stageWrap");
 const ovs=["ovTitle","ovSelect","ovIntro","ovPause","ovClear"];
 function show(id){ovs.forEach(o=>$(o).hidden=(o!==id));}
+$("verTitle").textContent="v"+VERSION;$("verSelect").textContent="v"+VERSION+"・全"+LEVELS.length+"ステージ";
 
 /* ===== 入力 ===== */
 let sensorOK=false,raw=null,base={x:0,y:0};
@@ -364,17 +289,14 @@ function onOrient(e){
   if(e.beta==null||e.gamma==null)return;
   const a=(screen.orientation&&typeof screen.orientation.angle==="number")?screen.orientation.angle:(window.orientation||0);
   let x=e.gamma,y=e.beta;
-  if(a===90){x=e.beta;y=-e.gamma;}
-  else if(a===-90||a===270){x=-e.beta;y=e.gamma;}
-  else if(a===180){x=-e.gamma;y=-e.beta;}
+  if(a===90){x=e.beta;y=-e.gamma;}else if(a===-90||a===270){x=-e.beta;y=e.gamma;}else if(a===180){x=-e.gamma;y=-e.beta;}
   raw={x,y};
   if(!sensorOK){sensorOK=true;base={x,y};updateMode();}
 }
 async function enableSensor(){
   try{
     if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
-      const r=await DeviceOrientationEvent.requestPermission();
-      if(r!=="granted"){updateMode();return;}
+      const r=await DeviceOrientationEvent.requestPermission();if(r!=="granted"){updateMode();return;}
     }
     window.addEventListener("deviceorientation",onOrient);
   }catch(e){}
@@ -382,28 +304,20 @@ async function enableSensor(){
 }
 function calibrate(){if(raw)base={x:raw.x,y:raw.y};}
 function updateMode(){
-  const c=$("modeChip");
-  c.textContent=sensorOK?"操作：傾き":"操作：ドラッグ";
-  c.classList.toggle("on",sensorOK);
   $("calibBtn").hidden=!sensorOK;
-  $("modeNote").textContent=sensorOK
-    ?"傾きセンサーで操作中。持ち方を変えたら「水平合わせ」を押してください。"
-    :"この環境では傾きセンサーが使えないため、画面をドラッグした方向に転がります。スマホのブラウザで直接開くと傾きで遊べます。";
-  $("inTip").textContent=sensorOK
-    ?"スマホを遊びやすい角度で持ってからスタートを押してください。その角度が「水平」になります。"
-    :"画面のどこかを押したまま、転がしたい方向へ指をずらして操作します。短くタップするとジャンプです。";
+  $("modeNote").textContent=sensorOK?"傾きセンサーで操作中。持ち方を変えたら、ゲーム中の「水平合わせ」を押してください。"
+    :"傾きセンサーが使えないため、画面をドラッグした方向に転がります。スマホのブラウザで直接開くと傾きで遊べます。";
+  $("inTip").textContent=sensorOK?"遊びやすい角度で持ってからスタートを押してください。その角度が「水平」になります。"
+    :"画面を押したまま、転がしたい方向へ指をずらして操作します。短くタップするとジャンプです。";
 }
 function clamp(v,a,b){return v<a?a:v>b?b:v;}
 function controlVec(){
   let x=0,y=0;
   if(drag.on){x=drag.x;y=drag.y;}
   else if(sensorOK&&raw){const d=SENS_DEG[save.sens]||22;x=clamp((raw.x-base.x)/d,-1,1);y=clamp((raw.y-base.y)/d,-1,1);}
-  const kx=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a?1:0);
-  const ky=(keys.ArrowDown||keys.s?1:0)-(keys.ArrowUp||keys.w?1:0);
+  const kx=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a?1:0),ky=(keys.ArrowDown||keys.s?1:0)-(keys.ArrowUp||keys.w?1:0);
   if(kx||ky){x=kx;y=ky;}
-  const m=Math.hypot(x,y);
-  if(m<0.05)return{x:0,y:0};
-  if(m>1){x/=m;y/=m;}
+  const m=Math.hypot(x,y);if(m<0.05)return{x:0,y:0};if(m>1){x/=m;y/=m;}
   if(G&&G.L.invert){x=-x;y=-y;}
   return{x,y};
 }
@@ -415,14 +329,10 @@ wrap.addEventListener("pointerdown",e=>{
 });
 wrap.addEventListener("pointermove",e=>{
   if(e.pointerId!==drag.id)return;
-  const dx=e.clientX-drag.ox,dy=e.clientY-drag.oy,m=Math.hypot(dx,dy);
-  drag.moved=Math.max(drag.moved,m);
+  const dx=e.clientX-drag.ox,dy=e.clientY-drag.oy,m=Math.hypot(dx,dy);drag.moved=Math.max(drag.moved,m);
   if(drag.moved>10){
-    drag.on=true;
-    const k=Math.min(1,m/60)/(m||1);
-    drag.x=dx*k;drag.y=dy*k;
-    const r=wrap.getBoundingClientRect();
-    stick.hidden=false;stick.style.left=(drag.ox-r.left)+"px";stick.style.top=(drag.oy-r.top)+"px";
+    drag.on=true;const k=Math.min(1,m/60)/(m||1);drag.x=dx*k;drag.y=dy*k;
+    const r=wrap.getBoundingClientRect();stick.hidden=false;stick.style.left=(drag.ox-r.left)+"px";stick.style.top=(drag.oy-r.top)+"px";
     knob.style.transform=`translate(${drag.x*38}px,${drag.y*38}px)`;
   }
 });
@@ -431,8 +341,7 @@ function endDrag(e){
   if(drag.moved<=10&&performance.now()-drag.t0<300)jump();
   drag.id=null;drag.on=false;drag.x=drag.y=0;stick.hidden=true;
 }
-wrap.addEventListener("pointerup",endDrag);
-wrap.addEventListener("pointercancel",endDrag);
+wrap.addEventListener("pointerup",endDrag);wrap.addEventListener("pointercancel",endDrag);
 const KEYMAP={ArrowUp:1,ArrowDown:1,ArrowLeft:1,ArrowRight:1,w:1,a:1,s:1,d:1};
 window.addEventListener("keydown",e=>{
   if(KEYMAP[e.key]){keys[e.key]=true;e.preventDefault();}
@@ -441,270 +350,470 @@ window.addEventListener("keydown",e=>{
 });
 window.addEventListener("keyup",e=>{if(KEYMAP[e.key])keys[e.key]=false;});
 
+/* ===== ステージ情報 ===== */
+function tilesOf(L){return new Set(L.map.join(""));}
+function gimmickNames(L){
+  const t=tilesOf(L),n=[];
+  if(t.has("O"))n.push("落とし穴");
+  if(t.has("$"))n.push("コイン");
+  if(t.has("I"))n.push("氷");
+  if(t.has("M"))n.push("泥");
+  if([">","<","^","v"].some(c=>t.has(c)))n.push("コンベア");
+  if(["2","4","6","8"].some(c=>t.has(c)))n.push("風");
+  if(L.jump)n.push("ジャンプ");
+  if(t.has("J"))n.push("羽");
+  if(t.has("L"))n.push("翼");
+  if(t.has("P"))n.push("バネ床");
+  if(t.has("r")||t.has("b"))n.push("鍵と扉");
+  if(t.has("x"))n.push("スイッチ壁");
+  if(t.has("T")||t.has("U"))n.push("ワープ");
+  if(t.has("%"))n.push("崩れる床");
+  if(L.friction!==undefined)n.push("高慣性");
+  if(L.dark)n.push("暗闇");
+  if(t.has("*"))n.push("ランタン");
+  if(L.invert)n.push("操作反転");
+  return n;
+}
+function rankFor(L,time,falls,cpUsed){
+  const T=L.par;
+  const ts=time<=T*0.8?5:time<=T?3:time<=T*1.3?2:time<=T*1.7?1:0;
+  const fs=falls===0?5:falls<=1?4:falls<=3?3:falls<=5?2:falls<=8?1:0;
+  let r=Math.min(ts,fs);if(r===5&&!cpUsed)r=6;return r;
+}
+function fmt(t){if(t==null)return"—";const m=Math.floor(t/60),s=t-m*60;return m+":"+(s<10?"0":"")+s.toFixed(1);}
+function pad2(n){return String(n).padStart(2,"0");}
+
 /* ===== ゲーム状態 ===== */
 let G=null,TS=40,DPR=1,staticCanvas=null;
 function tileAt(g,x,y){if(y<0||y>=g.rows||x<0||x>=g.cols)return"#";return g.grid[y][x];}
+function solidT(g,t,x,y){
+  if(t==="#")return true;
+  if(t==="R")return !g.f.r;
+  if(t==="B")return !g.f.b;
+  if(t==="X")return g.f.sw===0&&!g.ghost.has(x+","+y);
+  if(t==="Y")return g.f.sw===1&&!g.ghost.has(x+","+y);
+  return false;
+}
+function solidAt(g,x,y){return solidT(g,tileAt(g,x,y),x,y);}
+function countCoins(g){let n=0;for(const r of g.grid)for(const c of r)if(c==="$")n++;return n;}
+function snapshot(g){return{grid:g.grid.map(r=>r.slice()),f:Object.assign({},g.f)};}
+function restore(g,s){g.grid=s.grid.map(r=>r.slice());g.f=Object.assign({},s.f);g.ghost.clear();g.coinsLeft=countCoins(g);g.dirty=true;g.invDirty=true;}
+
 function loadLevel(i){
-  const L=LEVELS[i];
-  const grid=L.map.map(r=>r.split(""));
-  let sx=1,sy=1,gx=1,gy=1;
-  grid.forEach((r,y)=>r.forEach((c,x)=>{if(c==="S"){sx=x;sy=y;}if(c==="G"){gx=x;gy=y;}}));
+  const L=LEVELS[i],grid=L.map.map(r=>r.split(""));
+  let sx=1,sy=1,gx=1,gy=1;const warps={};
+  grid.forEach((r,y)=>r.forEach((c,x)=>{
+    if(c==="S"){sx=x;sy=y;}if(c==="G"){gx=x;gy=y;}
+    if(c==="T"||c==="U")(warps[c]=warps[c]||[]).push([x,y]);
+  }));
+  const warpTo={};
+  for(const k in warps)if(warps[k].length===2){const[a,b]=warps[k];warpTo[a[0]+","+a[1]]=b;warpTo[b[0]+","+b[1]]=a;}
   G={L,i,grid,rows:grid.length,cols:grid[0].length,
-     x:sx+.5,y:sy+.5,vx:0,vy:0,spawn:{x:sx+.5,y:sy+.5},goal:{x:gx+.5,y:gy+.5},
-     air:0,cool:0,falling:0,fallFrom:null,time:0,falls:0,running:false,done:false,cps:new Set(),bumpT:0};
-  $("hudNo").textContent="STAGE "+String(i+1).padStart(2,"0");
-  $("hudName").textContent=L.name;
-  $("jumpBtn").hidden=!L.jump;
+    x:sx+.5,y:sy+.5,vx:0,vy:0,spawn:{x:sx+.5,y:sy+.5},goal:{x:gx+.5,y:gy+.5},
+    air:0,airDur:1,airCap:JUMPS.n.cap,pad:false,cool:0,falling:0,fallFrom:null,time:0,falls:0,running:false,done:false,
+    f:{jump:!!L.jump,long:false,lantern:false,r:false,b:false,sw:0},ghost:new Set(),cps:new Set(),cpUsed:false,
+    lastTile:sx+","+sy,groundedHere:true,fresh:false,dirty:true,invDirty:true,warpTo,coinsTotal:0,coinsLeft:0,bumpT:0,fx:[]};
+  G.coinsTotal=G.coinsLeft=countCoins(G);
+  G.snap=snapshot(G);
+  $("hudNo").textContent="STAGE "+pad2(i+1);$("hudName").textContent=L.name;
+  const showHint=!!(L.tut&&L.hint);$("hintBar").hidden=!showHint;$("hintText").textContent=showHint?L.hint:"";
   resize();
 }
+function canJump(g){return g.f.jump||g.f.long;}
 function jump(){
-  if(!G||!G.running||!G.L.jump||G.air>0||G.falling>0||G.cool>0)return;
-  G.air=JUMP_DUR;G.cool=JUMP_DUR+0.08;
+  const g=G;if(!g||!g.running||g.air>0||g.falling>0||g.cool>0||!canJump(g))return;
+  const J=g.f.long?JUMPS.l:JUMPS.n;
+  g.air=J.dur;g.airDur=J.dur;g.airCap=J.cap;g.pad=false;g.cool=J.dur+0.08;
+  const sp=Math.hypot(g.vx,g.vy);if(sp>J.cap){g.vx*=J.cap/sp;g.vy*=J.cap/sp;}
   buzz(12);
 }
 function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}}
+function overlapTile(g,tx,ty){const cx=clamp(g.x,tx,tx+1),cy=clamp(g.y,ty,ty+1);return Math.hypot(g.x-cx,g.y-cy)<R+0.02;}
 
 function update(dt){
   const g=G;
-  g.time+=dt;
-  if(g.cool>0)g.cool-=dt;
-  if(g.falling>0){
-    g.falling-=dt;
-    if(g.falling<=0){g.x=g.spawn.x;g.y=g.spawn.y;g.vx=g.vy=0;g.air=0;}
-    return;
-  }
-  const inp=controlVec();
-  const acc=g.L.accel||14;
+  g.time+=dt;if(g.cool>0)g.cool-=dt;
+  if(g.falling>0){g.falling-=dt;if(g.falling<=0)respawn(g);return;}
+  const inp=controlVec(),acc=g.L.accel||14;
   const steps=Math.max(1,Math.ceil(dt/0.004)),h=dt/steps;
   let impact=0;
   for(let s=0;s<steps;s++){
-    const air=g.air>0;
-    const t=tileAt(g,Math.floor(g.x),Math.floor(g.y));
-    let ax=inp.x*acc*(air?0.45:1),ay=inp.y*acc*(air?0.45:1),fr=0.15;
-    if(!air){
-      fr=FRICTION[t]!==undefined?FRICTION[t]:2.2;
-      if(g.L.friction!==undefined&&t!=="I"&&t!=="M")fr=g.L.friction;
-      const cv=CONVEYOR[t];if(cv){ax+=cv[0]*CONVEYOR_ACC;ay+=cv[1]*CONVEYOR_ACC;}
+    const air=g.air>0,t=tileAt(g,Math.floor(g.x),Math.floor(g.y));
+    let ax=0,ay=0,fr=0;
+    if(!g.pad){
+      ax=inp.x*acc*(air?0.45:1);ay=inp.y*acc*(air?0.45:1);fr=0.15;
+      if(!air){
+        fr=FRICTION[t]!==undefined?FRICTION[t]:2.2;
+        if(g.L.friction!==undefined&&t!=="I"&&t!=="M")fr=g.L.friction;
+        const cv=CONVEYOR[t];if(cv){ax+=cv[0]*CONVEYOR_ACC;ay+=cv[1]*CONVEYOR_ACC;}
+      }
+      const w=WIND[t];if(w){ax+=w[0]*WIND_ACC;ay+=w[1]*WIND_ACC;}
     }
     g.vx+=ax*h;g.vy+=ay*h;
     const k=Math.exp(-fr*h);g.vx*=k;g.vy*=k;
-    const sp=Math.hypot(g.vx,g.vy);if(sp>MAX_SPEED){g.vx*=MAX_SPEED/sp;g.vy*=MAX_SPEED/sp;}
+    const cap=(air&&!g.pad)?g.airCap:MAX_SPEED;
+    const sp=Math.hypot(g.vx,g.vy);if(sp>cap){g.vx*=cap/sp;g.vy*=cap/sp;}
     g.x+=g.vx*h;g.y+=g.vy*h;
     impact=Math.max(impact,collide(g));
   }
   if(impact>2.2&&g.bumpT<=0){buzz(Math.min(30,impact*4)|0);g.bumpT=0.12;}
   if(g.bumpT>0)g.bumpT-=dt;
-  if(g.air>0)g.air=Math.max(0,g.air-dt);
-
-  const tx=Math.floor(g.x),ty=Math.floor(g.y),t=tileAt(g,tx,ty);
-  if(g.air<=0&&t==="O"){
-    g.falling=0.6;g.fallFrom={x:g.x,y:g.y,hx:tx+.5,hy:ty+.5};g.falls++;g.vx=g.vy=0;buzz(60);return;
-  }
-  if(t==="C"&&!g.cps.has(tx+","+ty)){g.cps.add(tx+","+ty);g.spawn={x:tx+.5,y:ty+.5};buzz(20);}
-  if(Math.hypot(g.x-g.goal.x,g.y-g.goal.y)<0.38)finish();
+  if(g.air>0){g.air=Math.max(0,g.air-dt);if(g.air===0&&g.pad){g.pad=false;g.vx*=0.25;g.vy*=0.25;}}
+  if(g.ghost.size){for(const k of [...g.ghost]){const[a,b]=k.split(",").map(Number);if(!overlapTile(g,a,b)){g.ghost.delete(k);g.dirty=true;}}}
+  tileEvents(g);
 }
 function collide(g){
-  let impact=0;
-  const fx=Math.floor(g.x),fy=Math.floor(g.y);
+  let impact=0;const fx=Math.floor(g.x),fy=Math.floor(g.y);
   for(let ty=fy-1;ty<=fy+1;ty++)for(let tx=fx-1;tx<=fx+1;tx++){
-    if(tileAt(g,tx,ty)!=="#")continue;
+    if(!solidAt(g,tx,ty))continue;
     const cx=clamp(g.x,tx,tx+1),cy=clamp(g.y,ty,ty+1);
     let dx=g.x-cx,dy=g.y-cy,d=Math.hypot(dx,dy);
     if(d>=R)continue;
     let nx,ny;
-    if(d<1e-6){const sp=Math.hypot(g.vx,g.vy)||1;nx=-g.vx/sp;ny=-g.vy/sp;d=0;}
-    else{nx=dx/d;ny=dy/d;}
+    if(d<1e-6){const sp=Math.hypot(g.vx,g.vy)||1;nx=-g.vx/sp;ny=-g.vy/sp;d=0;}else{nx=dx/d;ny=dy/d;}
     g.x+=nx*(R-d);g.y+=ny*(R-d);
     const vn=g.vx*nx+g.vy*ny;
     if(vn<0){g.vx-=(1+BOUNCE)*vn*nx;g.vy-=(1+BOUNCE)*vn*ny;impact=Math.max(impact,-vn);}
   }
   return impact;
 }
-function starsFor(L,time,falls){
-  if(time<=L.par&&falls===0)return 3;
-  if(time<=L.par*1.6&&falls<=2)return 2;
-  return 1;
+function tileEvents(g){
+  const tx=Math.floor(g.x),ty=Math.floor(g.y),key=tx+","+ty;
+  if(key!==g.lastTile){
+    if(g.groundedHere){const[lx,ly]=g.lastTile.split(",").map(Number);if(tileAt(g,lx,ly)==="%"){g.grid[ly][lx]="O";g.dirty=true;addFx(g,lx+.5,ly+.5,"#7a6a8c");buzz(10);}}
+    g.lastTile=key;g.fresh=true;g.groundedHere=false;
+  }
+  const t=tileAt(g,tx,ty);
+  if(t==="$"||t==="r"||t==="b"||t==="J"||t==="L"||t==="*")pickup(g,tx,ty,t);
+  if(g.air<=0){
+    if(t==="O"){fall(g,tx,ty);return;}
+    g.groundedHere=true;
+    if(g.fresh){
+      g.fresh=false;
+      if(t==="x")toggleSwitch(g,tx,ty);
+      else if(t==="C")checkpoint(g,tx,ty);
+      else if(t==="T"||t==="U")warp(g,key);
+      else if(t==="P")launch(g,tx,ty);
+    }
+  }
+  if(g.coinsLeft===0&&Math.hypot(g.x-g.goal.x,g.y-g.goal.y)<0.38)finish();
 }
+function pickup(g,tx,ty,t){
+  g.grid[ty][tx]=".";g.dirty=true;g.invDirty=true;
+  if(t==="$"){g.coinsLeft--;addFx(g,tx+.5,ty+.5,COL.brass);buzz(15);}
+  else if(t==="r"){g.f.r=true;addFx(g,tx+.5,ty+.5,COL.red);buzz(30);}
+  else if(t==="b"){g.f.b=true;addFx(g,tx+.5,ty+.5,COL.blue);buzz(30);}
+  else if(t==="J"){g.f.jump=true;addFx(g,tx+.5,ty+.5,"#ffffff");buzz(30);}
+  else if(t==="L"){g.f.jump=true;g.f.long=true;addFx(g,tx+.5,ty+.5,COL.brass);buzz(30);}
+  else if(t==="*"){g.f.lantern=true;addFx(g,tx+.5,ty+.5,"#ffcf7a");buzz(30);}
+}
+function toggleSwitch(g,tx,ty){
+  g.f.sw^=1;const closing=g.f.sw===0?"X":"Y";
+  const fx=Math.floor(g.x),fy=Math.floor(g.y);
+  for(let y=fy-1;y<=fy+1;y++)for(let x=fx-1;x<=fx+1;x++)if(tileAt(g,x,y)===closing&&overlapTile(g,x,y))g.ghost.add(x+","+y);
+  g.dirty=true;g.invDirty=true;addFx(g,tx+.5,ty+.5,g.f.sw?COL.blue:COL.red);buzz(18);
+}
+function checkpoint(g,tx,ty){
+  const k=tx+","+ty;if(g.cps.has(k))return;
+  g.cps.add(k);g.cpUsed=true;g.spawn={x:tx+.5,y:ty+.5};g.snap=snapshot(g);g.invDirty=true;addFx(g,tx+.5,ty+.5,COL.brass);buzz(20);
+}
+function warp(g,key){
+  const to=g.warpTo[key];if(!to)return;
+  addFx(g,g.x,g.y,tileAt(g,...key.split(",").map(Number))==="T"?COL.warpT:COL.warpU);
+  g.x=to[0]+.5;g.y=to[1]+.5;g.lastTile=to[0]+","+to[1];g.fresh=false;g.groundedHere=true;
+  addFx(g,g.x,g.y,tileAt(g,to[0],to[1])==="T"?COL.warpT:COL.warpU);buzz(20);
+}
+function launch(g,tx,ty){
+  let vx=g.vx,vy=g.vy;
+  if(Math.hypot(vx,vy)<0.4){const inp=controlVec();vx=inp.x;vy=inp.y;}
+  if(Math.abs(vx)<1e-3&&Math.abs(vy)<1e-3){g.fresh=true;return;}
+  let dx=0,dy=0;if(Math.abs(vx)>=Math.abs(vy))dx=Math.sign(vx);else dy=Math.sign(vy);
+  const v=PAD_DIST/PAD_DUR;
+  g.x=tx+.5;g.y=ty+.5;g.vx=dx*v;g.vy=dy*v;g.air=PAD_DUR;g.airDur=PAD_DUR;g.pad=true;
+  addFx(g,tx+.5,ty+.5,COL.brass);buzz(25);
+}
+function fall(g,tx,ty){
+  g.falling=0.6;g.fallFrom={x:g.x,y:g.y,hx:tx+.5,hy:ty+.5};g.falls++;g.vx=g.vy=0;g.air=0;g.pad=false;
+  rec(g.L.id).totalFalls++;persist();buzz(60);
+}
+function respawn(g){
+  restore(g,g.snap);
+  g.x=g.spawn.x;g.y=g.spawn.y;g.vx=g.vy=0;g.air=0;g.pad=false;g.falling=0;
+  g.lastTile=Math.floor(g.x)+","+Math.floor(g.y);g.fresh=false;g.groundedHere=true;
+}
+function backToPoint(){
+  const g=G;if(!g||g.done)return;
+  g.falls++;rec(g.L.id).totalFalls++;persist();respawn(g);show(null);g.running=true;
+}
+function addFx(g,x,y,color){g.fx.push({x,y,color,t:0});}
 function finish(){
-  const g=G;g.running=false;g.done=true;buzz([30,40,60]);
-  const st=starsFor(g.L,g.time,g.falls);
-  const key=String(g.i+1),prev=save.best[key];
-  save.best[key]={s:Math.max(st,prev?prev.s:0),t:prev?Math.min(prev.t,g.time):g.time};
-  save.unlocked=Math.max(save.unlocked,Math.min(LEVELS.length,g.i+2));
-  persist();
-  $("clNo").textContent="STAGE "+String(g.i+1).padStart(2,"0")+" CLEAR";
-  $("clName").textContent=g.L.name;
-  $("clStars").innerHTML=starHTML(st);
-  $("clTime").textContent=fmt(g.time);
-  $("clFalls").textContent=g.falls;
-  $("clRule").textContent="目標タイム "+fmt(g.L.par)+"｜★3：目標タイム以内かつ落下0回";
-  const last=g.i>=LEVELS.length-1;
-  $("nextBtn").textContent=last?"全ステージクリア！ステージ選択へ":"次のステージへ";
+  const g=G;if(g.done)return;g.running=false;g.done=true;buzz([30,40,60]);
+  const L=g.L,rank=rankFor(L,g.time,g.falls,g.cpUsed),r=rec(L.id);
+  const newTime=r.time==null||g.time<r.time,newFalls=r.minFalls==null||g.falls<r.minFalls,newRank=rank>r.rank;
+  if(newTime)r.time=g.time;if(newFalls)r.minFalls=g.falls;if(newRank)r.rank=rank;r.clears++;persist();
+  $("clNo").textContent="STAGE "+pad2(g.i+1)+" CLEAR";$("clName").textContent=L.name;
+  const rk=$("clRank");rk.textContent=RANKS[rank];rk.classList.toggle("low",rank<5);
+  $("clTime").textContent=fmt(g.time);$("clTimeNew").textContent=newTime&&r.clears>1?"ベスト更新":"";
+  $("clFalls").textContent=g.falls;$("clFallsNew").textContent=newFalls&&r.clears>1?"最少更新":"";
+  $("clCp").textContent=g.cpUsed?"使用":"なし";
+  $("clRule").textContent=nextRankNote(L,g,rank);
+  const last=g.i>=LEVELS.length-1;$("nextBtn").textContent=last?"全ステージクリア！ステージ選択へ":"次のステージへ";
   setTimeout(()=>show("ovClear"),350);
 }
-function fmt(t){const m=Math.floor(t/60),s=t-m*60;return m+":"+(s<10?"0":"")+s.toFixed(1);}
-function starHTML(n){let s="";for(let i=0;i<3;i++)s+=i<n?"★":'<span class="off">★</span>';return s;}
+function nextRankNote(L,g,rank){
+  const T=L.par;
+  if(rank===6)return"最高評価です。目標 "+fmt(T)+"／Sライン "+fmt(T*0.8);
+  if(rank===5)return"中間を取らずにSの条件でクリアするとS+です。";
+  const tips=[];
+  if(g.time>T*0.8)tips.push("Sには "+fmt(T*0.8)+" 以内");
+  if(g.falls>0)tips.push("落下0回");
+  return(tips.length?tips.join("・")+"でS。":"")+"Bは "+fmt(T)+" 以内かつ落下3回以下。";
+}
 
 /* ===== 描画 ===== */
 function resize(){
   if(!G)return;
-  const r=wrap.getBoundingClientRect();
-  const pad=14;
-  TS=Math.max(12,Math.floor(Math.min((r.width-pad)/G.cols,(r.height-pad)/G.rows)));
+  const r=wrap.getBoundingClientRect(),pad=14;
+  TS=Math.max(10,Math.floor(Math.min((r.width-pad)/G.cols,(r.height-pad)/G.rows)));
   DPR=Math.min(3,window.devicePixelRatio||1);
   const w=G.cols*TS,h=G.rows*TS;
   canvas.style.width=w+"px";canvas.style.height=h+"px";
   canvas.width=Math.round(w*DPR);canvas.height=Math.round(h*DPR);
-  buildStatic();
+  G.dirty=true;
 }
 function hash(x,y){let n=x*374761393+y*668265263;n=(n^(n>>13))*1274126177;return((n^(n>>16))>>>0)/4294967295;}
+function circle(c,x,y,r){c.beginPath();c.arc(x,y,r,0,Math.PI*2);}
 function buildStatic(){
   const g=G,S=TS*DPR;
-  staticCanvas=document.createElement("canvas");
+  if(!staticCanvas)staticCanvas=document.createElement("canvas");
   staticCanvas.width=canvas.width;staticCanvas.height=canvas.height;
   const c=staticCanvas.getContext("2d");
-  c.fillStyle="#1d2440";c.fillRect(0,0,staticCanvas.width,staticCanvas.height);
+  c.fillStyle=COL.bg;c.fillRect(0,0,staticCanvas.width,staticCanvas.height);
+  const lw=Math.max(1,S*.04);
   for(let y=0;y<g.rows;y++)for(let x=0;x<g.cols;x++){
-    const t=g.grid[y][x],px=x*S,py=y*S;
-    if(t==="#")continue;
-    const v=hash(x,y);
+    if(solidAt(g,x,y))continue;
+    const t=g.grid[y][x],px=x*S,py=y*S,cx=px+S/2,cy=py+S/2,v=hash(x,y);
+    c.fillStyle=((x+y)&1)?COL.f1:COL.f2;c.fillRect(px,py,S,S);
     if(t==="I"){
-      c.fillStyle="#3f7f98";c.fillRect(px,py,S,S);
-      c.strokeStyle="rgba(214,246,255,.35)";c.lineWidth=Math.max(1,S*.03);
-      c.beginPath();c.moveTo(px+S*(.15+v*.2),py+S*.75);c.lineTo(px+S*(.45+v*.2),py+S*.3);
-      c.moveTo(px+S*(.5+v*.1),py+S*.9);c.lineTo(px+S*.85,py+S*(.45+v*.1));c.stroke();
-      c.fillStyle="rgba(255,255,255,.06)";c.fillRect(px,py,S,S*.12);
+      c.fillStyle=COL.ice;c.fillRect(px,py,S,S);
+      c.strokeStyle="rgba(214,246,255,.35)";c.lineWidth=lw*.8;c.beginPath();
+      c.moveTo(px+S*(.15+v*.2),py+S*.75);c.lineTo(px+S*(.45+v*.2),py+S*.3);c.moveTo(px+S*(.5+v*.1),py+S*.9);c.lineTo(px+S*.85,py+S*(.45+v*.1));c.stroke();
     }else if(t==="M"){
-      c.fillStyle="#5b4230";c.fillRect(px,py,S,S);
-      c.fillStyle="rgba(30,18,10,.45)";
-      for(let k=0;k<5;k++){const a=hash(x*7+k,y*13+k),b=hash(y*5+k,x*11+k);c.beginPath();c.arc(px+S*(.15+a*.7),py+S*(.15+b*.7),S*(.05+a*.05),0,7);c.fill();}
-    }else{
-      c.fillStyle=((x+y)&1)?"#28304f":"#262e4c";c.fillRect(px,py,S,S);
-      if(CONVEYOR[t]){c.fillStyle="#2f3964";c.fillRect(px+S*.06,py+S*.06,S*.88,S*.88);}
+      c.fillStyle=COL.mud;c.fillRect(px,py,S,S);c.fillStyle="rgba(30,18,10,.45)";
+      for(let k=0;k<5;k++){const a=hash(x*7+k,y*13+k),b=hash(y*5+k,x*11+k);circle(c,px+S*(.15+a*.7),py+S*(.15+b*.7),S*(.05+a*.05));c.fill();}
+    }else if(CONVEYOR[t]){c.fillStyle="#2f3964";c.fillRect(px+S*.06,py+S*.06,S*.88,S*.88);}
+    else if(WIND[t]){c.fillStyle="#253a4a";c.fillRect(px,py,S,S);}
+    else if(t==="%"){
+      c.fillStyle=COL.crumb;c.fillRect(px+S*.04,py+S*.04,S*.92,S*.92);
+      c.strokeStyle="#15121c";c.lineWidth=lw;c.beginPath();
+      c.moveTo(px+S*.2,py+S*(.3+v*.2));c.lineTo(px+S*.5,py+S*.5);c.lineTo(px+S*.45,py+S*.85);c.moveTo(px+S*.5,py+S*.5);c.lineTo(px+S*.85,py+S*(.35+v*.2));c.stroke();
     }
     c.strokeStyle="rgba(0,0,0,.18)";c.lineWidth=1;c.strokeRect(px+.5,py+.5,S-1,S-1);
     if(t==="O"){
-      const gr=c.createRadialGradient(px+S*.5,py+S*.55,S*.05,px+S*.5,py+S*.5,S*.46);
-      gr.addColorStop(0,"#000");gr.addColorStop(.75,"#05070f");gr.addColorStop(1,"#141a30");
-      c.fillStyle=gr;c.beginPath();c.arc(px+S*.5,py+S*.5,S*.44,0,7);c.fill();
-      c.strokeStyle="rgba(152,161,192,.35)";c.lineWidth=Math.max(1,S*.03);c.beginPath();c.arc(px+S*.5,py+S*.5,S*.44,Math.PI*.15,Math.PI*.85);c.stroke();
-    }
-    if(t==="S"){c.strokeStyle="rgba(152,161,192,.45)";c.setLineDash([S*.08,S*.08]);c.lineWidth=Math.max(1,S*.04);c.beginPath();c.arc(px+S*.5,py+S*.5,S*.34,0,7);c.stroke();c.setLineDash([]);}
+      const gr=c.createRadialGradient(cx,cy+S*.05,S*.05,cx,cy,S*.46);gr.addColorStop(0,"#000");gr.addColorStop(.75,"#05070f");gr.addColorStop(1,"#141a30");
+      c.fillStyle=gr;circle(c,cx,cy,S*.44);c.fill();
+      c.strokeStyle="rgba(152,161,192,.35)";c.lineWidth=lw*.8;c.beginPath();c.arc(cx,cy,S*.44,Math.PI*.15,Math.PI*.85);c.stroke();
+    }else if(t==="S"){c.strokeStyle="rgba(152,161,192,.45)";c.setLineDash([S*.08,S*.08]);c.lineWidth=lw;circle(c,cx,cy,S*.34);c.stroke();c.setLineDash([]);}
+    else if(t==="x"){
+      c.fillStyle="#141a30";circle(c,cx,cy,S*.38);c.fill();
+      c.fillStyle=g.f.sw===0?COL.red:COL.blue;circle(c,cx,cy,S*.26);c.fill();
+      c.strokeStyle=g.f.sw===0?COL.blue:COL.red;c.lineWidth=lw*1.4;circle(c,cx,cy,S*.34);c.stroke();
+    }else if(t==="X"||t==="Y"){
+      c.strokeStyle=t==="X"?COL.red:COL.blue;c.globalAlpha=.7;c.setLineDash([S*.1,S*.08]);c.lineWidth=lw;c.strokeRect(px+S*.1,py+S*.1,S*.8,S*.8);c.setLineDash([]);c.globalAlpha=1;
+    }else if(t==="R"||t==="B"){c.fillStyle=t==="R"?"rgba(217,96,79,.18)":"rgba(91,143,224,.18)";c.fillRect(px+S*.08,py+S*.08,S*.84,S*.84);}
+    else if(t==="$"){
+      c.fillStyle="#9b7424";circle(c,cx+S*.03,cy+S*.04,S*.22);c.fill();
+      c.fillStyle=COL.brass;circle(c,cx,cy,S*.22);c.fill();
+      c.strokeStyle="#fff1c4";c.lineWidth=lw;circle(c,cx,cy,S*.13);c.stroke();
+    }else if(t==="r"||t==="b"){
+      const col=t==="r"?COL.red:COL.blue;c.strokeStyle=col;c.fillStyle=col;c.lineWidth=lw*1.6;c.lineCap="round";
+      circle(c,cx-S*.14,cy,S*.12);c.stroke();
+      c.beginPath();c.moveTo(cx-S*.02,cy);c.lineTo(cx+S*.28,cy);c.moveTo(cx+S*.2,cy);c.lineTo(cx+S*.2,cy+S*.12);c.moveTo(cx+S*.1,cy);c.lineTo(cx+S*.1,cy+S*.09);c.stroke();
+    }else if(t==="J"||t==="L"){
+      c.fillStyle=t==="J"?"rgba(255,255,255,.15)":"rgba(227,176,75,.2)";circle(c,cx,cy,S*.36);c.fill();
+      c.strokeStyle=t==="J"?"#ffffff":COL.brass;c.lineWidth=lw*1.6;c.lineCap="round";c.lineJoin="round";
+      const rows=t==="J"?[0]:[-.1,.1];
+      for(const o of rows){c.beginPath();c.moveTo(cx-S*.16,cy+S*(.1+o));c.lineTo(cx,cy+S*(-.08+o));c.lineTo(cx+S*.16,cy+S*(.1+o));c.stroke();}
+    }else if(t==="*"){
+      const gr=c.createRadialGradient(cx,cy,S*.04,cx,cy,S*.42);gr.addColorStop(0,"rgba(255,207,122,.9)");gr.addColorStop(1,"rgba(255,207,122,0)");
+      c.fillStyle=gr;circle(c,cx,cy,S*.42);c.fill();
+      c.fillStyle="#3a2c18";c.fillRect(cx-S*.1,cy-S*.16,S*.2,S*.06);c.fillRect(cx-S*.1,cy+S*.12,S*.2,S*.06);
+      c.fillStyle="#ffe2a3";c.fillRect(cx-S*.07,cy-S*.1,S*.14,S*.22);
+    }else if(t==="P"){
+      c.fillStyle="#3a4470";c.fillRect(px+S*.12,py+S*.12,S*.76,S*.76);
+      c.strokeStyle=COL.brass;c.lineWidth=lw*1.2;c.strokeRect(px+S*.2,py+S*.2,S*.6,S*.6);c.strokeRect(px+S*.32,py+S*.32,S*.36,S*.36);
+      c.fillStyle=COL.brass;circle(c,cx,cy,S*.06);c.fill();
+    }else if(t==="T"||t==="U"){c.fillStyle="#0d1022";circle(c,cx,cy,S*.4);c.fill();}
   }
   // 壁の影
   c.fillStyle="rgba(0,0,0,.38)";
-  for(let y=0;y<g.rows;y++)for(let x=0;x<g.cols;x++)if(g.grid[y][x]==="#")c.fillRect(x*S+S*.08,y*S+S*.12,S,S);
+  for(let y=0;y<g.rows;y++)for(let x=0;x<g.cols;x++)if(solidAt(g,x,y))c.fillRect(x*S+S*.08,y*S+S*.12,S,S);
   // 壁
   for(let y=0;y<g.rows;y++)for(let x=0;x<g.cols;x++){
-    if(g.grid[y][x]!=="#")continue;
-    const px=x*S,py=y*S;
-    c.fillStyle="#d9c69c";c.fillRect(px,py,S+.5,S+.5);
-    c.fillStyle="rgba(120,92,52,.12)";
-    for(let k=0;k<3;k++){const a=hash(x+k*3,y*2+k);c.fillRect(px,py+S*(.2+k*.27+a*.08),S+.5,Math.max(1,S*.025));}
-    if(tileAt(g,x,y+1)!=="#"){c.fillStyle="#a28a5f";c.fillRect(px,py+S*.84,S+.5,S*.16);}
-    if(tileAt(g,x,y-1)!=="#"){c.fillStyle="#f1e2bf";c.fillRect(px,py,S+.5,S*.06);}
-    if(tileAt(g,x+1,y)!=="#"){c.fillStyle="rgba(110,85,50,.35)";c.fillRect(px+S*.92,py,S*.08,S);}
+    if(!solidAt(g,x,y))continue;
+    const t=g.grid[y][x],px=x*S,py=y*S;
+    let face=COL.wall,lo=COL.wallLo,hi=COL.wallHi;
+    if(t==="X"){face=COL.red;lo=COL.redLo;hi="#f0a196";}
+    if(t==="Y"){face=COL.blue;lo=COL.blueLo;hi="#a9c6f4";}
+    c.fillStyle=face;c.fillRect(px,py,S+.5,S+.5);
+    if(t==="#"||t==="R"||t==="B"){c.fillStyle="rgba(120,92,52,.12)";for(let k=0;k<3;k++){const a=hash(x+k*3,y*2+k);c.fillRect(px,py+S*(.2+k*.27+a*.08),S+.5,Math.max(1,S*.025));}}
+    if(!solidAt(g,x,y+1)){c.fillStyle=lo;c.fillRect(px,py+S*.84,S+.5,S*.16);}
+    if(!solidAt(g,x,y-1)){c.fillStyle=hi;c.fillRect(px,py,S+.5,S*.06);}
+    if(t==="R"||t==="B"){
+      const col=t==="R"?COL.red:COL.blue;c.fillStyle=col;c.fillRect(px+S*.18,py+S*.14,S*.64,S*.62);
+      c.fillStyle="#1a1410";circle(c,px+S*.5,py+S*.38,S*.08);c.fill();c.fillRect(px+S*.46,py+S*.4,S*.08,S*.18);
+    }
+    if(t==="X"||t==="Y"){c.strokeStyle="rgba(0,0,0,.25)";c.lineWidth=lw;c.beginPath();c.moveTo(px+S*.2,py+S*.2);c.lineTo(px+S*.8,py+S*.7);c.moveTo(px+S*.8,py+S*.2);c.lineTo(px+S*.2,py+S*.7);c.stroke();}
   }
+  g.dirty=false;
 }
-function render(t){
-  const g=G,S=TS*DPR,c=ctx;
-  c.setTransform(1,0,0,1,0,0);
-  c.drawImage(staticCanvas,0,0);
-  // コンベア
+function render(now){
+  const g=G,S=TS*DPR,c=ctx,t=now;
+  if(g.dirty||!staticCanvas||staticCanvas.width!==canvas.width)buildStatic();
+  c.setTransform(1,0,0,1,0,0);c.drawImage(staticCanvas,0,0);
   for(let y=0;y<g.rows;y++)for(let x=0;x<g.cols;x++){
-    const cv=CONVEYOR[g.grid[y][x]];if(!cv)continue;
-    c.save();c.beginPath();c.rect(x*S+S*.06,y*S+S*.06,S*.88,S*.88);c.clip();
-    c.translate(x*S+S/2,y*S+S/2);c.rotate(Math.atan2(cv[1],cv[0]));
-    c.strokeStyle="rgba(227,176,75,.6)";c.lineWidth=S*.09;c.lineCap="round";c.lineJoin="round";
-    const ph=(t*1.4)%1;
-    for(let k=-1;k<2;k++){const ox=(k*.5+ph*.5)*S;c.beginPath();c.moveTo(ox-S*.12,-S*.2);c.lineTo(ox+S*.08,0);c.lineTo(ox-S*.12,S*.2);c.stroke();}
-    c.restore();
+    const ch=g.grid[y][x],px=x*S,py=y*S,cx=px+S/2,cy=py+S/2;
+    const cv=CONVEYOR[ch];
+    if(cv){
+      c.save();c.beginPath();c.rect(px+S*.06,py+S*.06,S*.88,S*.88);c.clip();
+      c.translate(cx,cy);c.rotate(Math.atan2(cv[1],cv[0]));
+      c.strokeStyle="rgba(227,176,75,.6)";c.lineWidth=S*.09;c.lineCap="round";c.lineJoin="round";
+      const ph=(t*1.4)%1;for(let k=-1;k<2;k++){const ox=(k*.5+ph*.5)*S;c.beginPath();c.moveTo(ox-S*.12,-S*.2);c.lineTo(ox+S*.08,0);c.lineTo(ox-S*.12,S*.2);c.stroke();}
+      c.restore();continue;
+    }
+    const w=WIND[ch];
+    if(w){
+      c.save();c.beginPath();c.rect(px,py,S,S);c.clip();c.translate(cx,cy);c.rotate(Math.atan2(w[1],w[0]));
+      c.strokeStyle="rgba(190,230,255,.45)";c.lineWidth=Math.max(1,S*.04);c.lineCap="round";
+      for(let k=0;k<3;k++){const ph=((t*1.8+hash(x,y+k)+k/3)%1);const ox=(ph-.5)*S*1.4,oy=(k-1)*S*.28;c.beginPath();c.moveTo(ox-S*.18,oy);c.lineTo(ox+S*.12,oy);c.stroke();}
+      c.restore();continue;
+    }
+    if(ch==="T"||ch==="U"){
+      const col=ch==="T"?COL.warpT:COL.warpU;c.save();c.translate(cx,cy);c.rotate(t*2.4*(ch==="T"?1:-1));
+      c.strokeStyle=col;c.lineWidth=Math.max(1.5,S*.06);c.lineCap="round";
+      for(let k=0;k<3;k++){c.beginPath();c.arc(0,0,S*(.12+k*.1),k*2.1,k*2.1+Math.PI*1.1);c.stroke();}
+      c.restore();continue;
+    }
+    if(ch==="C"){
+      const on=g.cps.has(x+","+y);
+      c.fillStyle=on?"rgba(227,176,75,.18)":"rgba(152,161,192,.1)";circle(c,cx,cy,S*.36);c.fill();
+      c.strokeStyle=on?COL.brass:COL.muted;c.lineWidth=S*.05;c.beginPath();c.moveTo(cx-S*.12,cy+S*.26);c.lineTo(cx-S*.12,cy-S*.26);c.stroke();
+      c.fillStyle=on?COL.brass:COL.muted;c.beginPath();c.moveTo(cx-S*.12,cy-S*.26);c.lineTo(cx+S*.2,cy-S*.15);c.lineTo(cx-S*.12,cy-S*.04);c.fill();
+    }
   }
-  // チェックポイント
-  for(let y=0;y<g.rows;y++)for(let x=0;x<g.cols;x++){
-    if(g.grid[y][x]!=="C")continue;
-    const on=g.cps.has(x+","+y),px=x*S+S/2,py=y*S+S/2;
-    c.fillStyle=on?"rgba(227,176,75,.18)":"rgba(152,161,192,.1)";c.beginPath();c.arc(px,py,S*.36,0,7);c.fill();
-    c.strokeStyle=on?"#e3b04b":"#98a1c0";c.lineWidth=S*.05;c.beginPath();c.moveTo(px-S*.12,py+S*.26);c.lineTo(px-S*.12,py-S*.26);c.stroke();
-    c.fillStyle=on?"#e3b04b":"#98a1c0";c.beginPath();c.moveTo(px-S*.12,py-S*.26);c.lineTo(px+S*.2,py-S*.15);c.lineTo(px-S*.12,py-S*.04);c.fill();
-  }
-  // ゴール
-  const gx=g.goal.x*S,gy=g.goal.y*S,pulse=(Math.sin(t*3)+1)/2;
-  drawGoal(c,gx,gy,S,pulse,1);
-  // 玉
+  const pulse=(Math.sin(t*3)+1)/2,gx=g.goal.x*S,gy=g.goal.y*S;
+  drawGoal(c,gx,gy,S,pulse,g.coinsLeft>0);
+  // エフェクト
+  g.fx=g.fx.filter(e=>e.t<0.5);
+  for(const e of g.fx){const k=e.t/0.5;c.globalAlpha=1-k;c.strokeStyle=e.color;c.lineWidth=S*.06;circle(c,e.x*S,e.y*S,S*(.2+k*.5));c.stroke();}
+  c.globalAlpha=1;
   drawBall(c,g,S);
-  // 暗闇
   if(g.L.dark){
-    let bx=g.x*S,by=g.y*S;
-    if(g.falling>0&&g.fallFrom){bx=g.fallFrom.hx*S;by=g.fallFrom.hy*S;}
-    const gr=c.createRadialGradient(bx,by,S*1.3,bx,by,S*2.6);
-    gr.addColorStop(0,"rgba(6,8,16,0)");gr.addColorStop(1,"rgba(6,8,16,.97)");
+    let bx=g.x*S,by=g.y*S;if(g.falling>0&&g.fallFrom){bx=g.fallFrom.hx*S;by=g.fallFrom.hy*S;}
+    const r0=g.f.lantern?2.4:1.3,r1=g.f.lantern?4.2:2.6;
+    const gr=c.createRadialGradient(bx,by,S*r0,bx,by,S*r1);gr.addColorStop(0,"rgba(6,8,16,0)");gr.addColorStop(1,"rgba(6,8,16,.97)");
     c.fillStyle=gr;c.fillRect(0,0,canvas.width,canvas.height);
-    c.globalAlpha=.35+.35*pulse;drawGoal(c,gx,gy,S,pulse,.8);c.globalAlpha=1;
+    c.globalAlpha=.35+.35*pulse;drawGoal(c,gx,gy,S,pulse,g.coinsLeft>0);c.globalAlpha=1;
   }
 }
-function drawGoal(c,gx,gy,S,pulse,a){
-  c.fillStyle="rgba(227,176,75,"+(.12+.12*pulse)*a+")";c.beginPath();c.arc(gx,gy,S*(.42+.06*pulse),0,7);c.fill();
-  c.strokeStyle="#e3b04b";c.lineWidth=S*.07;c.beginPath();c.arc(gx,gy,S*.32,0,7);c.stroke();
-  c.lineWidth=S*.04;c.beginPath();c.arc(gx,gy,S*.16,0,7);c.stroke();
+function drawGoal(c,gx,gy,S,pulse,locked){
+  if(locked){
+    c.strokeStyle="rgba(227,176,75,.45)";c.setLineDash([S*.08,S*.07]);c.lineWidth=S*.06;circle(c,gx,gy,S*.32);c.stroke();c.setLineDash([]);
+    c.fillStyle="rgba(227,176,75,.6)";c.fillRect(gx-S*.11,gy-S*.02,S*.22,S*.16);
+    c.strokeStyle="rgba(227,176,75,.6)";c.lineWidth=S*.045;c.beginPath();c.arc(gx,gy-S*.03,S*.08,Math.PI,0);c.stroke();
+    return;
+  }
+  c.fillStyle="rgba(227,176,75,"+(.12+.12*pulse)+")";circle(c,gx,gy,S*(.42+.06*pulse));c.fill();
+  c.strokeStyle=COL.brass;c.lineWidth=S*.07;circle(c,gx,gy,S*.32);c.stroke();
+  c.lineWidth=S*.04;circle(c,gx,gy,S*.16);c.stroke();
 }
 function drawBall(c,g,S){
   let x=g.x*S,y=g.y*S,h=0,shrink=1,alpha=1;
-  if(g.air>0)h=Math.sin(Math.PI*(1-g.air/JUMP_DUR));
+  if(g.air>0)h=Math.sin(Math.PI*(1-g.air/g.airDur))*(g.pad?1.35:1);
   if(g.falling>0&&g.fallFrom){
     const f=1-g.falling/0.6,e=Math.min(1,f*2.2);
-    x=(g.fallFrom.x+(g.fallFrom.hx-g.fallFrom.x)*e)*S;y=(g.fallFrom.y+(g.fallFrom.hy-g.fallFrom.y)*e)*S;
-    shrink=Math.max(0.05,1-f*0.95);alpha=1-f*0.6;
+    x=(g.fallFrom.x+(g.fallFrom.hx-g.fallFrom.x)*e)*S;y=(g.fallFrom.y+(g.fallFrom.hy-g.fallFrom.y)*e)*S;shrink=Math.max(0.05,1-f*0.95);alpha=1-f*0.6;
   }
   const r=R*S*(1+0.35*h)*shrink;
-  if(g.falling<=0){
-    c.fillStyle="rgba(0,0,0,"+(0.45-0.25*h)+")";
-    c.beginPath();c.ellipse(x+S*(.05+.16*h),y+S*(.08+.24*h),R*S*(1-.15*h),R*S*(.9-.15*h),0,0,7);c.fill();
-  }
-  const yy=y-h*S*.18;
-  c.globalAlpha=alpha;
+  if(g.falling<=0){c.fillStyle="rgba(0,0,0,"+Math.max(.12,0.45-0.25*h)+")";c.beginPath();c.ellipse(x+S*(.05+.16*h),y+S*(.08+.24*h),R*S*(1-.15*Math.min(h,1)),R*S*(.9-.15*Math.min(h,1)),0,0,Math.PI*2);c.fill();}
+  const yy=y-h*S*.18;c.globalAlpha=alpha;
   const gr=c.createRadialGradient(x-r*.38,yy-r*.42,r*.08,x,yy,r*1.05);
   gr.addColorStop(0,"#ffffff");gr.addColorStop(.22,"#d4d9e6");gr.addColorStop(.68,"#6b7391");gr.addColorStop(1,"#262b3f");
-  c.fillStyle=gr;c.beginPath();c.arc(x,yy,r,0,7);c.fill();
-  c.fillStyle="rgba(227,176,75,.22)";c.beginPath();c.arc(x+r*.3,yy+r*.42,r*.38,0,7);c.fill();
-  c.globalAlpha=1;
+  c.fillStyle=gr;circle(c,x,yy,r);c.fill();
+  c.fillStyle="rgba(227,176,75,.22)";circle(c,x+r*.3,yy+r*.42,r*.38);c.fill();c.globalAlpha=1;
 }
 
-/* ===== HUD・画面遷移 ===== */
-function hud(){if(!G)return;$("hudTime").textContent=fmt(G.time);$("hudFalls").textContent=G.falls;}
+/* ===== HUD・画面 ===== */
+function chip(text,cls){const s=document.createElement("span");s.className="chip"+(cls?" "+cls:"");s.textContent=text;return s;}
+function hud(){
+  if(!G)return;
+  $("hudTime").textContent=fmt(G.time);$("hudFalls").textContent=G.falls;
+  if(G.invDirty){
+    G.invDirty=false;const inv=$("inv");inv.textContent="";const f=G.f;
+    if(G.coinsTotal)inv.appendChild(chip("コイン "+(G.coinsTotal-G.coinsLeft)+"/"+G.coinsTotal,G.coinsLeft===0?"on":""));
+    if(f.long)inv.appendChild(chip("大ジャンプ","on"));else if(f.jump)inv.appendChild(chip("ジャンプ","on"));
+    if(f.r)inv.appendChild(chip("赤い鍵","red"));
+    if(f.b)inv.appendChild(chip("青い鍵","blue"));
+    if(f.lantern)inv.appendChild(chip("ランタン","on"));
+    if(G.L.map.some(r=>r.includes("x")))inv.appendChild(chip(f.sw===0?"赤い壁が閉":"青い壁が閉",f.sw===0?"red":"blue"));
+    if(G.cpUsed)inv.appendChild(chip("中間使用"));
+    $("jumpBtn").hidden=!canJump(G);
+  }
+}
 function buildSelect(){
-  const grid=$("levelGrid");grid.textContent="";
-  LEVELS.forEach((L,i)=>{
-    const b=document.createElement("button");b.className="lv";b.id="lv"+(i+1);
-    const locked=i+1>save.unlocked;b.disabled=locked;
-    const best=save.best[String(i+1)];
-    const tags=[L.jump?"ジャンプ":"",L.dark?"暗闇":"",L.invert?"反転":"",L.friction!==undefined?"高慣性":""].filter(Boolean).join("・");
-    b.innerHTML=`<span class="n">${String(i+1).padStart(2,"0")}</span><span class="t">${locked?"？？？":L.name}</span>`+
-      `<span class="s">${starHTML(best?best.s:0)}</span><span class="b">${best?"ベスト "+fmt(best.t):(locked?"前のステージをクリア":"未クリア")}</span>`+
-      (tags&&!locked?`<span class="tag">${tags}</span>`:"");
-    b.addEventListener("click",()=>openIntro(i));
-    grid.appendChild(b);
+  const host=$("chapters");host.textContent="";
+  CHAPTERS.forEach(ch=>{
+    const idx=LEVELS.map((L,i)=>i).filter(i=>LEVELS[i].ch===ch.n);if(!idx.length)return;
+    const sec=document.createElement("section");sec.className="chapter";
+    const h=document.createElement("h3");h.textContent="第"+ch.n+"章 "+ch.name;
+    const done=idx.filter(cleared).length;const sm=document.createElement("small");sm.textContent=done+"/"+idx.length+" クリア";h.appendChild(sm);
+    const grid=document.createElement("div");grid.className="levels";
+    idx.forEach(i=>{
+      const L=LEVELS[i],r=save.stages[L.id],lock=!unlocked(i);
+      const b=document.createElement("button");b.className="lv";b.id="lv-"+L.id;b.disabled=lock;
+      const n=document.createElement("span");n.className="n";n.textContent=pad2(i+1);
+      const rk=document.createElement("span");const rv=r&&r.rank>=0?r.rank:-1;rk.className="rk"+(rv>=0?" r"+rv:"");rk.textContent=rv>=0?RANKS[rv]:"—";
+      const t=document.createElement("span");t.className="t";t.textContent=lock?"？？？":L.name;
+      b.append(n,rk,t);
+      if(!lock){
+        const m1=document.createElement("span");m1.className="m";
+        m1.textContent=r&&r.clears?"ベスト "+fmt(r.time)+"　目標 "+fmt(L.par):"未クリア　目標 "+fmt(L.par);
+        const m2=document.createElement("span");m2.className="m";
+        m2.textContent="落下 最少"+(r&&r.minFalls!=null?r.minFalls:"—")+"／累計"+(r?r.totalFalls:0);
+        const tg=document.createElement("span");tg.className="tg";tg.textContent=(L.tut?"チュートリアル・":"")+gimmickNames(L).join("・");
+        b.append(m1,m2,tg);
+      }else{const m=document.createElement("span");m.className="m";m.textContent="前のステージをクリアで解放";b.append(m);}
+      b.addEventListener("click",()=>openIntro(i));
+      grid.appendChild(b);
+    });
+    sec.append(h,grid);host.appendChild(sec);
   });
   document.querySelectorAll("#sensSeg button").forEach(btn=>btn.setAttribute("aria-pressed",String(+btn.dataset.v===save.sens)));
 }
 function openSelect(){if(G)G.running=false;buildSelect();show("ovSelect");}
 function openIntro(i){
-  loadLevel(i);
-  $("inNo").textContent="STAGE "+String(i+1).padStart(2,"0")+"｜目標 "+fmt(LEVELS[i].par);
-  $("inName").textContent=LEVELS[i].name;
-  $("inHint").textContent=LEVELS[i].hint;
+  loadLevel(i);const L=LEVELS[i],T=L.par;
+  $("inNo").textContent="STAGE "+pad2(i+1)+"｜第"+L.ch+"章";
+  $("inName").textContent=L.name;
+  const tags=$("inTags");tags.textContent="";if(L.tut)tags.appendChild(chip("チュートリアル","on"));gimmickNames(L).forEach(n=>tags.appendChild(chip(n)));
+  $("inHint").textContent=L.hint||"";
+  const tg=$("inTargets");tg.textContent="";
+  [["S+","Sの条件＋中間を取らない"],["S",fmt(T*0.8)+" 以内・落下0"],["A",fmt(T*0.8)+" 以内・落下1以下"],["B",fmt(T)+" 以内・落下3以下"]].forEach(([k,v])=>{
+    const b=document.createElement("b");b.textContent=k;const s=document.createElement("span");s.textContent=v;tg.append(b,s);
+  });
   show("ovIntro");
 }
 function begin(){calibrate();show(null);G.running=true;wake();}
 function pause(){if(!G||G.done)return;G.running=false;show("ovPause");}
 let wakeLock=null;
-async function wake(){try{if(!wakeLock&&navigator.wakeLock)wakeLock=await navigator.wakeLock.request("screen");wakeLock&&wakeLock.addEventListener&&wakeLock.addEventListener("release",()=>{wakeLock=null;});}catch(e){}}
+async function wake(){try{if(!wakeLock&&navigator.wakeLock){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>{wakeLock=null;});}}catch(e){}}
 
 $("startBtn").addEventListener("click",async()=>{await enableSensor();updateMode();openSelect();});
 $("goBtn").addEventListener("click",begin);
 $("inBack").addEventListener("click",openSelect);
 $("menuBtn").addEventListener("click",()=>{if(G&&G.running)pause();});
 $("resumeBtn").addEventListener("click",()=>{show(null);G.running=true;});
+$("backPointBtn").addEventListener("click",backToPoint);
 $("retryBtn").addEventListener("click",()=>{loadLevel(G.i);begin();});
 $("toSelectBtn").addEventListener("click",openSelect);
 $("clRetry").addEventListener("click",()=>{loadLevel(G.i);begin();});
@@ -721,13 +830,11 @@ let last=performance.now();
 function frame(now){
   const dt=Math.min(0.033,(now-last)/1000);last=now;
   if(G&&G.running)update(dt);
-  if(G&&staticCanvas)render(now/1000);
+  if(G){for(const e of G.fx)e.t+=dt;render(now/1000);}
   hud();
   requestAnimationFrame(frame);
 }
-loadLevel(0);
-updateMode();
-requestAnimationFrame(frame);
+loadLevel(0);updateMode();requestAnimationFrame(frame);
 })();
 </script>
 
