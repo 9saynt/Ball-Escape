@@ -63,6 +63,7 @@ canvas#board{display:block;border-radius:10px;box-shadow:0 0 0 6px #0c1020,0 0 0
 .chip.on{color:var(--brass);border-color:rgba(227,176,75,.5)}
 .chip.red{color:#f0a196;border-color:rgba(217,96,79,.6)}
 .chip.blue{color:#a9c6f4;border-color:rgba(91,143,224,.6)}
+.skipbtn{flex:none;height:30px;padding:0 10px;border-radius:999px;border:1px dashed var(--muted);color:var(--muted);font-size:12px;font-weight:700}
 .jump{flex:none;width:64px;height:56px;border-radius:16px;background:var(--brass);color:var(--brass-ink);font-family:var(--display);font-size:15px;box-shadow:0 4px 0 #9b7424}
 .jump:active{transform:translateY(3px);box-shadow:0 1px 0 #9b7424}
 
@@ -125,6 +126,7 @@ canvas#board{display:block;border-radius:10px;box-shadow:0 0 0 6px #0c1020,0 0 0
     <div class="stage"><span class="no" id="hudNo">STAGE 01</span><span class="nm" id="hudName">—</span></div>
     <div class="stat"><b id="hudTime">0:00.0</b><span>TIME</span></div>
     <div class="stat"><b id="hudFalls">0</b><span>落下</span></div>
+    <button class="skipbtn" id="skipBtn" hidden>スキップ</button>
   </div>
   <div class="hintbar" id="hintBar" hidden><span class="tag">ヒント</span><p id="hintText"></p></div>
   <div class="stage-wrap" id="stageWrap">
@@ -160,7 +162,7 @@ canvas#board{display:block;border-radius:10px;box-shadow:0 0 0 6px #0c1020,0 0 0
     </div></div>
     <p class="note" id="modeNote"></p>
     <div id="chapters" style="display:flex;flex-direction:column;gap:18px"></div>
-    <p class="note">評価：S+（Sの条件で中間を取らない）・S・A・B・C・D・E。時間と落下回数をそれぞれ判定し、低いほうになります。</p>
+    <p class="note">評価：S+（Sの条件で中間を取らない）・S・A・B・C・D・E。時間と落下回数をそれぞれ判定し、低いほうになります。前の章のチュートリアル面をクリアすると次の章が開きます。何度も落ちて長く詰まったステージは、画面右上の「スキップ」で飛ばせます。</p>
     <span class="ver" id="verSelect"></span>
   </div>
 </div>
@@ -188,6 +190,17 @@ canvas#board{display:block;border-radius:10px;box-shadow:0 0 0 6px #0c1020,0 0 0
   </div>
 </div>
 
+<div class="ov" id="ovSkip" hidden>
+  <div class="card">
+    <span class="eyebrow">SKIP</span>
+    <h2>このステージを飛ばしますか？</h2>
+    <p>スキップすると、評価は付きませんが次のステージへ進めます。あとからいつでも挑戦でき、クリアすれば通常どおり記録されます。</p>
+    <p class="note">第8章「難関」の解放には、それまでの全ステージを実際にクリアする必要があります。</p>
+    <button class="btn" id="skipYes">スキップする</button>
+    <button class="btn sub" id="skipNo">もう少し挑戦する</button>
+  </div>
+</div>
+
 <div class="ov" id="ovClear" hidden>
   <div class="card">
     <span class="eyebrow" id="clNo">STAGE 01 CLEAR</span>
@@ -207,7 +220,7 @@ canvas#board{display:block;border-radius:10px;box-shadow:0 0 0 6px #0c1020,0 0 0
 <script>
 (function(){
 "use strict";
-const VERSION="1.1.0";
+const VERSION="1.2.0";
 const LEVELS=[
 {"id":"s01","ch":1,"tut":true,"name":"はじめの一歩","hint":"スマホを傾けると玉が転がります。金色の輪（ゴール）まで運びましょう。旗は「中間」で、取ると落ちたときにそこから再開できます。","map":["#########","#S......#","#######.#","#.......#","#.#######","#.......#","####C##.#","#######.#","#.......#","#.#######","#.......#","#######G#","#########"],"par":24.5},
 {"id":"s02","ch":1,"tut":true,"name":"落とし穴","hint":"黒い穴に落ちると、最後に取った中間かスタートに戻ります。落下回数は評価に影響します。","map":["#########","#S..O...#","#.O...O.#","#...O...#","#O.O..O.#","#...O...#","###.###C#","#...O...#","#.O...O.#","#...O..O#","#O.O...O#","#....O.G#","#########"],"par":13},
@@ -233,7 +246,7 @@ const LEVELS=[
 {"id":"s22","ch":5,"name":"崩落の輪","hint":"輪の上のコインを全部取ってから出口へ。回る向きを間違えると戻れません。","map":["###########","#S...#....#","#OO%OO%O#.#","#O%%%%%%#.#","#O%OOOO%#.#","#O$OOOO$#.#","#O%OOOO%#.#","#O%%$%%%#.#","#OOOOOOO#.#","#.........#","#.........#","#.OOO.OOO.#","#C...$....#","#OOOO.OOOG#","###########"],"par":27.5},
 {"id":"s23","ch":5,"tut":true,"name":"風の通り道","hint":"風の床では矢印の方向へ押し流されます。ジャンプ中も流されます。","map":["###########","#S........#","#222222222#","#.........#","#.O.O.O.O.#","#666666666#","#OOOOOOOO.#","#.........#","#444444444#","#.OOOOOOOO#","#.........#","#...C.....#","#888888888#","#........G#","###########"],"par":21.5},
 {"id":"s24","ch":5,"name":"風上へ跳べ","jump":true,"hint":"踏み切りの床に風。流されながら穴を飛び越えよう。","map":["###########","#S........#","#666666666#","#OOOOOOOOO#","#...C.....#","#444444444#","#OOOOOOOOO#","#.........#","#.O.O.O.O.#","#666666666#","#OOOOOOOOO#","#.........#","#OO.OOO.OO#","#....G....#","###########"],"par":10.5},
-{"id":"s25","ch":5,"name":"崩れる氷原","hint":"風に逆らってコインを取り、崩れる出口へ。氷の上では止まれません。","map":["###########","#S.IIIIIII#","#OOOOOO%OO#","#$6666666.#","#OOOOOOO%O#","#....C....#","#IIIIIIIII#","#%OOOOOOO%#","#444444444#","#OOOO%OOOO#","#.........#","#.II$I$II.#","#OOOOOOOO%#","#G.......$#","###########"],"par":34.5},
+{"id":"s25","ch":5,"name":"崩れる氷原","hint":"風に逆らってコインを取り、崩れる出口へ。氷の上では止まれません。","map":["###########","#S.IIIIIII#","#OOOOOO%OO#","#$6666666.#","#OOOOOOOO%#","#....C....#","#IIIIIIIII#","#%OOOOOOO%#","#444444444#","#OOOO%OOOO#","#.........#","#.II$I$II.#","#OOOOOOOO%#","#G.......$#","###########"],"par":33.5},
 {"id":"s26","ch":6,"tut":true,"name":"慣性の盤","friction":0.28,"accel":8,"hint":"この盤は摩擦がほとんどありません。動き出すと止まりにくいので、早めに傾きを戻して。","map":["###########","#S........#","#.OOOOOOO.#","#.........#","#######...#","#.........#","#...OOOOOO#","#.........#","#OOOOOO...#","#.........#","#C..#######","#.........#","#.OOOOOOOO#","#........G#","###########"],"par":35.5},
 {"id":"s27","ch":6,"tut":true,"name":"暗闇","dark":true,"hint":"玉の周りしか見えません。ゴールの光をたよりに進みましょう。","map":["###########","#S..#.....#","###.#.###.#","#...#...#.#","#.#####.#.#","#.....#.#.#","#####.#...#","#...#.#####","#.#.#.....#","#.#.#####.#","#.#...C...#","#.#######.#","#...O.....#","#.#####..G#","###########"],"par":21},
 {"id":"s28","ch":6,"tut":true,"name":"ランタン","dark":true,"optional":["lantern"],"hint":"ランタンを拾うと、見える範囲が広がります。","map":["###########","#S....#*..#","#.###.#.#.#","#.#...#.#.#","#.#.###.#.#","#...#...#.#","###.#.###.#","#...#...#.#","#.#####.#.#","#.....#...#","#####.#####","#.C.O.....#","#.#######.#","#.......#G#","###########"],"par":21.5},
@@ -250,7 +263,7 @@ const LEVELS=[
 {"id":"s39","ch":8,"name":"崩落するさかさ盤","invert":true,"hint":"逆さ操作でバネに乗り、崩れる床を一筆書き。","map":["#############","#S..........#","#%%%%%P%%%%%#","#OOOOOOOOOOO#","#OOOOOOOOOOO#","#$.........$#","#%OOOOOOOOO%#","#%OOOOOOOOO%#","#.C.........#","#.OOOOPOOOO.#","#.OOOOOOOOO.#","#.OOOOOOOOO.#","#....$.$....#","#OOOOO%OOOOO#","#OOOOO%OOOOO#","#.....G.....#","#############"],"par":30.5},
 {"id":"s40","ch":8,"name":"傾き迷路・終","hint":"これまでの全てのしかけ。泥、羽、氷、スイッチ、風、渦、バネ、翼、流れ、崩落、そして扉。中間は跳び越えられます。","map":["#############","#SMMMMMMMMJ.#","#OOOOOOOOOOv#","#IIIIIIIIIII#","#OOOOOOOOOOO#","#r....C....x#","#X###########","#6666666666T#","#############","#T..POO.L..v#","###########v#","#$<<<<<<<<<<#","#.###########","#.%%%%OO.R..#","###########$#","###########G#","#############"],"par":49.5}
 ];
-const CHAPTERS=[{"n":1,"name":"基本"},{"n":2,"name":"床"},{"n":3,"name":"跳ぶ"},{"n":4,"name":"しかけ"},{"n":5,"name":"崩落と風"},{"n":6,"name":"環境"},{"n":7,"name":"複合"},{"n":8,"name":"難関"}];
+const CHAPTERS=[{"n":1,"name":"基本"},{"n":2,"name":"床"},{"n":3,"name":"跳ぶ"},{"n":4,"name":"しかけ"},{"n":5,"name":"崩落と風"},{"n":6,"name":"環境"},{"n":7,"name":"複合"},{"n":8,"name":"難関","unlock":"all"}];
 
 /* ===== 定数 ===== */
 const R=0.3,BOUNCE=0.35,MAX_SPEED=6.5;
@@ -270,14 +283,34 @@ const SAVE_KEY="katamuki-maze-v2";
 let save={v:2,stages:{},sens:1};
 try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");if(s&&typeof s==="object"&&s.stages&&typeof s.stages==="object")save=Object.assign(save,s);}catch(e){}
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save));}catch(e){}}
-function rec(id){if(!save.stages[id])save.stages[id]={rank:-1,time:null,minFalls:null,totalFalls:0,clears:0};return save.stages[id];}
+function rec(id){if(!save.stages[id])save.stages[id]={rank:-1,time:null,minFalls:null,totalFalls:0,clears:0};const r=save.stages[id];if(r.playTime==null)r.playTime=0;return r;}
 function cleared(i){const r=save.stages[LEVELS[i].id];return !!(r&&r.clears>0);}
-function unlocked(i){return i===0||cleared(i-1);}
+function passed(i){const r=save.stages[LEVELS[i].id];return !!(r&&(r.clears>0||r.skipped));}
+function chapterOf(n){return CHAPTERS.find(c=>c.n===n)||{n};}
+/* 章の解放：前の章のチュートリアル面をすべて通過（クリアかスキップ）。unlock:"all" の章は、それより前の全ステージをクリア（スキップは数えない） */
+function chapterBlockers(n){
+  if(n===CHAPTERS[0].n)return[];
+  if(chapterOf(n).unlock==="all")return LEVELS.map((L,j)=>j).filter(j=>LEVELS[j].ch<n&&!cleared(j));
+  return LEVELS.map((L,j)=>j).filter(j=>LEVELS[j].ch===n-1&&LEVELS[j].tut&&!passed(j));
+}
+/* 章の中：その面より前にある同じ章のチュートリアル面を通過していれば遊べる */
+function stageBlockers(i){const L=LEVELS[i],b=[];for(let j=0;j<i;j++)if(LEVELS[j].ch===L.ch&&LEVELS[j].tut&&!passed(j))b.push(j);return b;}
+function unlocked(i){return chapterBlockers(LEVELS[i].ch).length===0&&stageBlockers(i).length===0;}
+function listText(idx){const n=idx.map(i=>i+1);if(n.length>2&&n[n.length-1]-n[0]===n.length-1)return n[0]+"〜"+n[n.length-1]+"面";return n.join("・")+"面";}
+function lockReason(i){
+  const L=LEVELS[i],cb=chapterBlockers(L.ch);
+  if(cb.length){
+    if(chapterOf(L.ch).unlock==="all")return"第"+CHAPTERS[0].n+"〜"+(L.ch-1)+"章の全ステージをクリアで解放（残り"+cb.length+"面）";
+    return listText(cb)+"をクリアで解放";
+  }
+  return listText(stageBlockers(i))+"をクリアで解放";
+}
+function skipReady(L){const r=save.stages[L.id];return !!(r&&!r.clears&&!r.skipped&&r.totalFalls>=10&&r.playTime>=Math.max(120,L.par*6));}
 
 /* ===== DOM ===== */
 const $=id=>document.getElementById(id);
 const canvas=$("board"),ctx=canvas.getContext("2d"),wrap=$("stageWrap");
-const ovs=["ovTitle","ovSelect","ovIntro","ovPause","ovClear"];
+const ovs=["ovTitle","ovSelect","ovIntro","ovPause","ovClear","ovSkip"];
 function show(id){ovs.forEach(o=>$(o).hidden=(o!==id));}
 $("verTitle").textContent="v"+VERSION;$("verSelect").textContent="v"+VERSION+"・全"+LEVELS.length+"ステージ";
 
@@ -395,6 +428,20 @@ function solidT(g,t,x,y){
   return false;
 }
 function solidAt(g,x,y){return solidT(g,tileAt(g,x,y),x,y);}
+const HOLE_R=0.44;
+function isHole(g,x,y){return tileAt(g,x,y)==="O";}
+/* 玉の中心が穴の黒い部分（丸＋隣の穴とつながる帯＋2×2の穴の中央）に入っているか */
+function inHole(g,px,py){
+  const tx=Math.floor(px),ty=Math.floor(py);if(!isHole(g,tx,ty))return false;
+  const lx=px-tx-.5,ly=py-ty-.5,r=HOLE_R;
+  if(lx*lx+ly*ly<r*r)return true;
+  if(lx>=0&&Math.abs(ly)<r&&isHole(g,tx+1,ty))return true;
+  if(lx<=0&&Math.abs(ly)<r&&isHole(g,tx-1,ty))return true;
+  if(ly>=0&&Math.abs(lx)<r&&isHole(g,tx,ty+1))return true;
+  if(ly<=0&&Math.abs(lx)<r&&isHole(g,tx,ty-1))return true;
+  const sx=lx>=0?1:-1,sy=ly>=0?1:-1;
+  return isHole(g,tx+sx,ty)&&isHole(g,tx,ty+sy)&&isHole(g,tx+sx,ty+sy);
+}
 function countCoins(g){let n=0;for(const r of g.grid)for(const c of r)if(c==="$")n++;return n;}
 function snapshot(g){return{grid:g.grid.map(r=>r.slice()),f:Object.assign({},g.f)};}
 function restore(g,s){g.grid=s.grid.map(r=>r.slice());g.f=Object.assign({},s.f);g.ghost.clear();g.coinsLeft=countCoins(g);g.dirty=true;g.invDirty=true;}
@@ -432,7 +479,7 @@ function overlapTile(g,tx,ty){const cx=clamp(g.x,tx,tx+1),cy=clamp(g.y,ty,ty+1);
 
 function update(dt){
   const g=G;
-  g.time+=dt;if(g.cool>0)g.cool-=dt;
+  g.time+=dt;g.playAcc=(g.playAcc||0)+dt;if(g.playAcc>=5)flushPlay(g);if(g.cool>0)g.cool-=dt;
   if(g.falling>0){g.falling-=dt;if(g.falling<=0)respawn(g);return;}
   const inp=controlVec(),acc=g.L.accel||14;
   const steps=Math.max(1,Math.ceil(dt/0.004)),h=dt/steps;
@@ -486,7 +533,7 @@ function tileEvents(g){
   const t=tileAt(g,tx,ty);
   if(t==="$"||t==="r"||t==="b"||t==="J"||t==="L"||t==="*")pickup(g,tx,ty,t);
   if(g.air<=0){
-    if(t==="O"){fall(g,tx,ty);return;}
+    if(t==="O"&&inHole(g,g.x,g.y)){fall(g,tx,ty);return;}
     g.groundedHere=true;
     if(g.fresh){
       g.fresh=false;
@@ -534,7 +581,7 @@ function launch(g,tx,ty){
 }
 function fall(g,tx,ty){
   g.falling=0.6;g.fallFrom={x:g.x,y:g.y,hx:tx+.5,hy:ty+.5};g.falls++;g.vx=g.vy=0;g.air=0;g.pad=false;
-  rec(g.L.id).totalFalls++;persist();buzz(60);
+  rec(g.L.id).totalFalls++;persist();updateSkip();buzz(60);
 }
 function respawn(g){
   restore(g,g.snap);
@@ -543,11 +590,20 @@ function respawn(g){
 }
 function backToPoint(){
   const g=G;if(!g||g.done)return;
-  g.falls++;rec(g.L.id).totalFalls++;persist();respawn(g);show(null);g.running=true;
+  g.falls++;rec(g.L.id).totalFalls++;persist();respawn(g);show(null);g.running=true;updateSkip();
 }
+function flushPlay(g){if(!g||!g.playAcc)return;rec(g.L.id).playTime+=g.playAcc;g.playAcc=0;persist();updateSkip();}
+function updateSkip(){const b=$("skipBtn");if(!b)return;b.hidden=!(G&&G.running&&!G.done&&skipReady(G.L));}
+function askSkip(){if(!G||G.done)return;G.running=false;flushPlay(G);show("ovSkip");}
+function doSkip(){
+  const g=G;const r=rec(g.L.id);r.skipped=true;persist();g.done=true;
+  const n=nextPlayable(g.i);if(n<0)openSelect();else openIntro(n);
+}
+function nextPlayable(i){for(let j=i+1;j<LEVELS.length;j++)if(unlocked(j))return j;return -1;}
 function addFx(g,x,y,color){g.fx.push({x,y,color,t:0});}
 function finish(){
   const g=G;if(g.done)return;g.running=false;g.done=true;buzz([30,40,60]);
+  flushPlay(g);updateSkip();
   const L=g.L,rank=rankFor(L,g.time,g.falls,g.cpUsed),r=rec(L.id);
   const newTime=r.time==null||g.time<r.time,newFalls=r.minFalls==null||g.falls<r.minFalls,newRank=rank>r.rank;
   if(newTime)r.time=g.time;if(newFalls)r.minFalls=g.falls;if(newRank)r.rank=rank;r.clears++;persist();
@@ -557,7 +613,8 @@ function finish(){
   $("clFalls").textContent=g.falls;$("clFallsNew").textContent=newFalls&&r.clears>1?"最少更新":"";
   $("clCp").textContent=g.cpUsed?"使用":"なし";
   $("clRule").textContent=nextRankNote(L,g,rank);
-  const last=g.i>=LEVELS.length-1;$("nextBtn").textContent=last?"全ステージクリア！ステージ選択へ":"次のステージへ";
+  const nx=nextPlayable(g.i);
+  $("nextBtn").textContent=nx<0?(LEVELS.every((l,j)=>cleared(j))?"全ステージクリア！ステージ選択へ":"ステージ選択へ"):"次のステージへ（"+pad2(nx+1)+"）";
   setTimeout(()=>show("ovClear"),350);
 }
 function nextRankNote(L,g,rank){
@@ -609,11 +666,7 @@ function buildStatic(){
       c.moveTo(px+S*.2,py+S*(.3+v*.2));c.lineTo(px+S*.5,py+S*.5);c.lineTo(px+S*.45,py+S*.85);c.moveTo(px+S*.5,py+S*.5);c.lineTo(px+S*.85,py+S*(.35+v*.2));c.stroke();
     }
     c.strokeStyle="rgba(0,0,0,.18)";c.lineWidth=1;c.strokeRect(px+.5,py+.5,S-1,S-1);
-    if(t==="O"){
-      const gr=c.createRadialGradient(cx,cy+S*.05,S*.05,cx,cy,S*.46);gr.addColorStop(0,"#000");gr.addColorStop(.75,"#05070f");gr.addColorStop(1,"#141a30");
-      c.fillStyle=gr;circle(c,cx,cy,S*.44);c.fill();
-      c.strokeStyle="rgba(152,161,192,.35)";c.lineWidth=lw*.8;c.beginPath();c.arc(cx,cy,S*.44,Math.PI*.15,Math.PI*.85);c.stroke();
-    }else if(t==="S"){c.strokeStyle="rgba(152,161,192,.45)";c.setLineDash([S*.08,S*.08]);c.lineWidth=lw;circle(c,cx,cy,S*.34);c.stroke();c.setLineDash([]);}
+    if(t==="S"){c.strokeStyle="rgba(152,161,192,.45)";c.setLineDash([S*.08,S*.08]);c.lineWidth=lw;circle(c,cx,cy,S*.34);c.stroke();c.setLineDash([]);}
     else if(t==="x"){
       c.fillStyle="#141a30";circle(c,cx,cy,S*.38);c.fill();
       c.fillStyle=g.f.sw===0?COL.red:COL.blue;circle(c,cx,cy,S*.26);c.fill();
@@ -644,6 +697,24 @@ function buildStatic(){
       c.strokeStyle=COL.brass;c.lineWidth=lw*1.2;c.strokeRect(px+S*.2,py+S*.2,S*.6,S*.6);c.strokeRect(px+S*.32,py+S*.32,S*.36,S*.36);
       c.fillStyle=COL.brass;circle(c,cx,cy,S*.06);c.fill();
     }else if(t==="T"||t==="U"){c.fillStyle="#0d1022";circle(c,cx,cy,S*.4);c.fill();}
+  }
+  // 穴（判定と同じ形：丸＋隣の穴とつながる帯＋2×2の中央）
+  const hr=HOLE_R*S;
+  c.fillStyle="#06080f";
+  for(let y=0;y<g.rows;y++)for(let x=0;x<g.cols;x++){
+    if(!isHole(g,x,y))continue;
+    const cx=x*S+S/2,cy=y*S+S/2;
+    circle(c,cx,cy,hr);c.fill();
+    if(isHole(g,x+1,y))c.fillRect(cx,cy-hr,S,hr*2);
+    if(isHole(g,x,y+1))c.fillRect(cx-hr,cy,hr*2,S);
+    if(isHole(g,x+1,y)&&isHole(g,x,y+1)&&isHole(g,x+1,y+1))c.fillRect(cx,cy,S,S);
+  }
+  for(let y=0;y<g.rows;y++)for(let x=0;x<g.cols;x++){
+    if(!isHole(g,x,y))continue;
+    const cx=x*S+S/2,cy=y*S+S/2;
+    const gr=c.createRadialGradient(cx,cy,0,cx,cy,hr);gr.addColorStop(0,"rgba(0,0,0,.9)");gr.addColorStop(1,"rgba(0,0,0,0)");
+    c.fillStyle=gr;circle(c,cx,cy,hr);c.fill();
+    if(!isHole(g,x,y+1)){c.strokeStyle="rgba(152,161,192,.35)";c.lineWidth=lw*.8;c.beginPath();c.arc(cx,cy,hr,Math.PI*.15,Math.PI*.85);c.stroke();}
   }
   // 壁の影
   c.fillStyle="rgba(0,0,0,.38)";
@@ -772,25 +843,28 @@ function buildSelect(){
       const L=LEVELS[i],r=save.stages[L.id],lock=!unlocked(i);
       const b=document.createElement("button");b.className="lv";b.id="lv-"+L.id;b.disabled=lock;
       const n=document.createElement("span");n.className="n";n.textContent=pad2(i+1);
-      const rk=document.createElement("span");const rv=r&&r.rank>=0?r.rank:-1;rk.className="rk"+(rv>=0?" r"+rv:"");rk.textContent=rv>=0?RANKS[rv]:"—";
+      const rk=document.createElement("span");const rv=r&&r.rank>=0?r.rank:-1;rk.className="rk"+(rv>=0?" r"+rv:"");rk.textContent=rv>=0?RANKS[rv]:(r&&r.skipped?"飛":"—");
       const t=document.createElement("span");t.className="t";t.textContent=lock?"？？？":L.name;
       b.append(n,rk,t);
       if(!lock){
         const m1=document.createElement("span");m1.className="m";
-        m1.textContent=r&&r.clears?"ベスト "+fmt(r.time)+"　目標 "+fmt(L.par):"未クリア　目標 "+fmt(L.par);
+        m1.textContent=r&&r.clears?"ベスト "+fmt(r.time)+"　目標 "+fmt(L.par):(r&&r.skipped?"スキップ済み":"未クリア")+"　目標 "+fmt(L.par);
         const m2=document.createElement("span");m2.className="m";
         m2.textContent="落下 最少"+(r&&r.minFalls!=null?r.minFalls:"—")+"／累計"+(r?r.totalFalls:0);
-        const tg=document.createElement("span");tg.className="tg";tg.textContent=(L.tut?"チュートリアル・":"")+gimmickNames(L).join("・");
+        const tg=document.createElement("span");tg.className="tg";tg.textContent=[L.tut?"チュートリアル":"",...gimmickNames(L)].filter(Boolean).join("・");
         b.append(m1,m2,tg);
-      }else{const m=document.createElement("span");m.className="m";m.textContent="前のステージをクリアで解放";b.append(m);}
+      }else{const m=document.createElement("span");m.className="m";m.textContent=lockReason(i);b.append(m);}
       b.addEventListener("click",()=>openIntro(i));
       grid.appendChild(b);
     });
-    sec.append(h,grid);host.appendChild(sec);
+    sec.append(h);
+    const cb=chapterBlockers(ch.n);
+    if(cb.length){const p=document.createElement("p");p.className="note";p.textContent=lockReason(idx[0]);sec.append(p);}
+    sec.append(grid);host.appendChild(sec);
   });
   document.querySelectorAll("#sensSeg button").forEach(btn=>btn.setAttribute("aria-pressed",String(+btn.dataset.v===save.sens)));
 }
-function openSelect(){if(G)G.running=false;buildSelect();show("ovSelect");}
+function openSelect(){if(G){G.running=false;flushPlay(G);}updateSkip();buildSelect();show("ovSelect");}
 function openIntro(i){
   loadLevel(i);const L=LEVELS[i],T=L.par;
   $("inNo").textContent="STAGE "+pad2(i+1)+"｜第"+L.ch+"章";
@@ -803,8 +877,8 @@ function openIntro(i){
   });
   show("ovIntro");
 }
-function begin(){calibrate();show(null);G.running=true;wake();}
-function pause(){if(!G||G.done)return;G.running=false;show("ovPause");}
+function begin(){calibrate();show(null);G.running=true;wake();updateSkip();}
+function pause(){if(!G||G.done)return;G.running=false;flushPlay(G);updateSkip();show("ovPause");}
 let wakeLock=null;
 async function wake(){try{if(!wakeLock&&navigator.wakeLock){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>{wakeLock=null;});}}catch(e){}}
 
@@ -812,17 +886,20 @@ $("startBtn").addEventListener("click",async()=>{await enableSensor();updateMode
 $("goBtn").addEventListener("click",begin);
 $("inBack").addEventListener("click",openSelect);
 $("menuBtn").addEventListener("click",()=>{if(G&&G.running)pause();});
-$("resumeBtn").addEventListener("click",()=>{show(null);G.running=true;});
+$("resumeBtn").addEventListener("click",()=>{show(null);G.running=true;updateSkip();});
 $("backPointBtn").addEventListener("click",backToPoint);
 $("retryBtn").addEventListener("click",()=>{loadLevel(G.i);begin();});
 $("toSelectBtn").addEventListener("click",openSelect);
 $("clRetry").addEventListener("click",()=>{loadLevel(G.i);begin();});
 $("clSelect").addEventListener("click",openSelect);
-$("nextBtn").addEventListener("click",()=>{if(G.i>=LEVELS.length-1)openSelect();else openIntro(G.i+1);});
+$("nextBtn").addEventListener("click",()=>{const n=nextPlayable(G.i);if(n<0)openSelect();else openIntro(n);});
+$("skipBtn").addEventListener("click",askSkip);
+$("skipYes").addEventListener("click",doSkip);
+$("skipNo").addEventListener("click",()=>{show(null);G.running=true;updateSkip();});
 $("calibBtn").addEventListener("click",calibrate);
 $("jumpBtn").addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();jump();});
 document.querySelectorAll("#sensSeg button").forEach(btn=>btn.addEventListener("click",()=>{save.sens=+btn.dataset.v;persist();buildSelect();}));
-document.addEventListener("visibilitychange",()=>{if(document.hidden&&G&&G.running)pause();});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){if(G&&G.running)pause();else if(G)flushPlay(G);}});
 if(window.ResizeObserver)new ResizeObserver(()=>resize()).observe(wrap);else window.addEventListener("resize",resize);
 
 /* ===== ループ ===== */
